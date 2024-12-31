@@ -51,18 +51,7 @@ const handleRequest = async (env, request) => {
             }
         );
     }
-    const url = request.url.startsWith('http')
-        ? new URL(request.url)
-        : new URL(request.url, process.env.VERCEL_URL
-            ? `https://${process.env.VERCEL_URL}`
-            : 'http://localhost:3000');
-
-    let corsUrl = url.searchParams.get('url');
-    const summary = url.searchParams.get('summary');
-
-    if (!corsUrl) {
-        corsUrl = getRandomFeed();
-    }
+    const corsUrl = getRandomFeed();
 
     const corsHeaders = {
         'Access-Control-Allow-Origin': '*',
@@ -157,7 +146,7 @@ const handleRequest = async (env, request) => {
             .replace(/\s+/g, ' ')
             .trim();
 
-        if (description.length > 200 && summary) {
+        if (description.length > 200) {
             const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
                 method: 'POST',
                 headers: {
