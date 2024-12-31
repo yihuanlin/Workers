@@ -75,6 +75,14 @@ export default async function handler(request, env) {
     let attempts = 0;
     let text;
     let response;
+    let items;
+    let validItems = [];
+    const itemRegex = /<item[^>]*>[\s\S]*?<\/item>/g
+    const descriptionRegex = /<description[^>]*>([\s\S]*?)<\/description>/
+    const htmlEntitiesMap = {
+        '&lt;': '<',
+        '&gt;': '>'
+    }
 
     while (attempts < 3) {
         const corsRequest = new Request(corsUrl, {
@@ -89,12 +97,19 @@ export default async function handler(request, env) {
         })
 
         try {
-            const controller = new AbortController();
-            const timeout = setTimeout(() => controller.abort(), 15000);
             response = await fetch(corsRequest, { signal: controller.signal });
-            clearTimeout(timeout);
-            if (response.ok) {
-                text = await response.text();
+            text = await response.text();
+            items = text.match(itemRegex) || []
+            validItems = items.filter(item => {
+                const description = item.match(descriptionRegex)?.[1] || ''
+                return description
+                    .replace('ABSTRACT', '')
+                    .replace(/&lt;|&gt;/g, match => htmlEntitiesMap[match])
+                    .replace(/<[^>]+>/g, '')
+                    .replace(/\s+/g, ' ')
+                    .trim() !== ''
+            })
+            if (validItems.length > 0) {
                 break;
             }
         } catch (error) {
@@ -107,7 +122,7 @@ export default async function handler(request, env) {
         }
     }
 
-    if (!text) {
+    if (!validItems.length > 0) {
         return new Response(JSON.stringify({ error: 'Failed to fetch feed after 3 attempts' }), {
             status: 502,
             headers: {
@@ -117,67 +132,43 @@ export default async function handler(request, env) {
         });
     }
 
-    const itemRegex = /<item[^>]*>[\s\S]*?<\/item>/g
-    const descriptionRegex = /<description[^>]*>([\s\S]*?)<\/description>/
-    const htmlEntitiesMap = {
-        '&lt;': '<',
-        '&gt;': '>'
+    const randomItem = validItems[Math.floor(Math.random() * validItems.length)]
+    const getTagContent = (tag) => randomItem.match(new RegExp(`<${tag}[^>]*>(.*?)<\/${tag}>`, 's'))?.[1] || ''
+    let title = getTagContent('title').replace(/\s+/g, ' ').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
+    title = (/[.!?]$/.test(title) ? title : title + '.').replace(/&lt;i&gt;(.*?)&lt;\/i&gt;/g, '<em>$1</em>')
+
+    let description = getTagContent('description')
+        .replace('ABSTRACT', '')
+        .replace(']]>', '')
+        .replace(/&lt;|&gt;/g, match => htmlEntitiesMap[match])
+        .replace(/<[^>]+>/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    if (description.length > 200) {
+        const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': env.GEMINI_API_KEY
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{
+                        text: `Summarize the abstract for "${title}" in concise academic style, do not include question and author information: ${description}`
+                    }]
+                }]
+            })
+        });
+        const geminiData = await geminiResponse.json();
+        const ai = { response: geminiData.candidates[0].content.parts[0].text };
+        description = ai.response.replace(/\n/g, ' ').trim();
     }
 
-    const items = text.match(itemRegex) || []
-    const validItems = items.filter(item => {
-        const description = item.match(descriptionRegex)?.[1] || ''
-        return description
-            .replace('ABSTRACT', '')
-            .replace(/&lt;|&gt;/g, match => htmlEntitiesMap[match])
-            .replace(/<[^>]+>/g, '')
-            .replace(/\s+/g, ' ')
-            .trim() !== ''
-    })
-
-    let result = {}
-    if (validItems.length > 0) {
-        const randomItem = validItems[Math.floor(Math.random() * validItems.length)]
-        const getTagContent = (tag) => {
-            const match = randomItem.match(new RegExp(`<${tag}[^>]*>(.*?)<\/${tag}>`, 's'));
-            return match && match[1] ? match[1] : '';
-        }
-        let title = getTagContent('title').replace(/\s+/g, ' ').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
-        title = (/[.!?]$/.test(title) ? title : title + '.').replace(/&lt;i&gt;(.*?)&lt;\/i&gt;/g, '<em>$1</em>')
-
-        let description = getTagContent('description')
-            .replace('ABSTRACT', '')
-            .replace(']]>', '')
-            .replace(/&lt;|&gt;/g, match => htmlEntitiesMap[match])
-            .replace(/<[^>]+>/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-        if (description.length > 200) {
-            const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-goog-api-key': env.GEMINI_API_KEY
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: `Summarize the abstract for "${title}" in concise academic style, do not include question and author information: ${description}`
-                        }]
-                    }]
-                })
-            });
-            const geminiData = await geminiResponse.json();
-            const ai = { response: geminiData.candidates[0].content.parts[0].text };
-            description = ai.response.replace(/\n/g, ' ').trim();
-        }
-
-        result = {
-            title: title,
-            link: getTagContent('link').trim(),
-            description: description
-        }
+    const result = {
+        title: title,
+        link: getTagContent('link').trim(),
+        description: description
     }
 
     return new Response(JSON.stringify(result), {
