@@ -24,7 +24,7 @@ const createResponse = async (weatherData, locationData) => {
 }
 
 export const config = {
-    runtime: 'Node.js'
+    runtime: 'edge'
 };
 
 export default async function handler(request) {
