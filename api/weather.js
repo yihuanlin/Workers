@@ -21,10 +21,6 @@ export default async function handler(request) {
         );
     }
 
-    const cache = caches.default
-    let response = await cache.match(request)
-    if (response) return response
-
     const ip = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip')
     const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${env.IPGEO_KEY}&ip=${ip}`)
     if (!geoResponse.ok) {
@@ -68,7 +64,5 @@ export default async function handler(request) {
             }
         }
     )
-
-    await cache.put(request, response.clone())
     return response
 }
