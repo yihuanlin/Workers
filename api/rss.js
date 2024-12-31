@@ -96,7 +96,10 @@ const handleRequest = async (env, request) => {
         })
 
         try {
-            response = await fetch(corsRequest);
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 15000);
+            response = await fetch(corsRequest, { signal: controller.signal });
+            clearTimeout(timeout);
             if (response.ok) {
                 text = await response.text();
                 break;
@@ -155,32 +158,22 @@ const handleRequest = async (env, request) => {
             .trim();
 
         if (description.length > 200 && summary) {
-            let ai;
-            try {
-                const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-goog-api-key': env.GEMINI_API_KEY
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: `Summarize the abstract for "${title}" in concise academic style, do not include question and author information: ${description}`
-                            }]
+            const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-goog-api-key': env.GEMINI_API_KEY
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: `Summarize the abstract for "${title}" in concise academic style, do not include question and author information: ${description}`
                         }]
-                    })
-                });
-                const geminiData = await geminiResponse.json();
-                ai = { response: geminiData.candidates[0].content.parts[0].text };
-            } catch (error) {
-                ai = await env.AI.run('@cf/meta/llama-3.3-70b-instruct-fp8-fast', {
-                    messages: [
-                        { role: 'system', content: `Summarize the abstract for "${title}" in concise academic style, do not include question and author information:` },
-                        { role: 'user', content: description }
-                    ]
-                });
-            }
+                    }]
+                })
+            });
+            const geminiData = await geminiResponse.json();
+            const ai = { response: geminiData.candidates[0].content.parts[0].text };
             description = ai.response.replace(/\n/g, ' ').trim();
         }
 

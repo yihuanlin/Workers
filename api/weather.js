@@ -42,7 +42,7 @@ export default async function handler(request) {
         throw new Error(`Weather service error: ${weatherResponse.status}`)
     }
     const weatherData = await weatherResponse.json()
-    response = new Response(
+    const response = new Response(
         JSON.stringify({
             city: city,
             temperature: Math.round(weatherData.current.temp),
