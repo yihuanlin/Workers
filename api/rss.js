@@ -77,6 +77,7 @@ export default async function handler(request, env) {
     let response;
     let items;
     let validItems = [];
+    let corsRequest;
     const itemRegex = /<item[^>]*>[\s\S]*?<\/item>/g
     const descriptionRegex = /<description[^>]*>([\s\S]*?)<\/description>/
     const htmlEntitiesMap = {
@@ -85,7 +86,7 @@ export default async function handler(request, env) {
     }
 
     while (attempts < 3) {
-        const corsRequest = new Request(corsUrl, {
+        corsRequest = new Request(corsUrl, {
             method: request.method,
             headers: request.headers,
             body: request.method !== 'GET' ? request.body : null,
@@ -97,7 +98,7 @@ export default async function handler(request, env) {
         })
 
         try {
-            response = await fetch(corsRequest, { signal: controller.signal });
+            response = await fetch(corsRequest);
             text = await response.text();
             items = text.match(itemRegex) || []
             validItems = items.filter(item => {
