@@ -55,7 +55,7 @@ export default async function handler(request, env) {
             }
         );
     }
-    const corsUrl = getRandomFeed();
+    let corsUrl = getRandomFeed();
 
     const corsHeaders = {
         'Access-Control-Allow-Origin': '*',
