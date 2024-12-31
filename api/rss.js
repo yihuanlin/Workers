@@ -1,42 +1,46 @@
-const FEED_GROUPS = {
-    development: 'https://journals.biologists.com/rss/site_1000005/1000005.xml',
-    cell: [
-        'https://www.cell.com/developmental-cell/current.rss',
-        'https://www.cell.com/developmental-cell/inpress.rss',
-        'https://www.cell.com/cell/current.rss',
-        'https://www.cell.com/cell/inpress.rss',
-        'https://www.cell.com/neuron/current.rss',
-        'https://www.cell.com/neuron/inpress.rss',
-        'https://www.cell.com/trends/neurosciences/current.rss',
-        'https://www.cell.com/trends/neurosciences/inpress.rss',
-        'https://www.cell.com/current-biology/current.rss',
-        'https://www.cell.com/current-biology/inpress.rss'
-    ],
-    reviews: [
-        'https://www.annualreviews.org/rss/content/journals/cellbio/latestarticles?fmt=rss',
-        'https://www.annualreviews.org/rss/content/journals/neuro/latestarticles?fmt=rss'
-    ],
-    neuro: [
-        'https://neuraldevelopment.biomedcentral.com/articles/most-recent/rss.xml',
-        'https://www.eneuro.org/rss/ahead.xml'
-    ],
-    elife: [
-        'https://elifesciences.org/rss/digests.xml',
-        'https://elifesciences.org/rss/subject/developmental-biology.xml'
-    ]
+export const config = {
+    runtime: 'edge'
 };
 
-const getRandomFeed = () => {
-    const feedKeys = Object.keys(FEED_GROUPS);
-    const randomKey = feedKeys[Math.floor(Math.random() * feedKeys.length)];
-    let selectedFeed = FEED_GROUPS[randomKey];
-    if (Array.isArray(selectedFeed)) {
-        selectedFeed = selectedFeed[Math.floor(Math.random() * selectedFeed.length)];
-    }
-    return selectedFeed;
-};
+export default async function handler(request, env) {
+    const FEED_GROUPS = {
+        development: 'https://journals.biologists.com/rss/site_1000005/1000005.xml',
+        cell: [
+            'https://www.cell.com/developmental-cell/current.rss',
+            'https://www.cell.com/developmental-cell/inpress.rss',
+            'https://www.cell.com/cell/current.rss',
+            'https://www.cell.com/cell/inpress.rss',
+            'https://www.cell.com/neuron/current.rss',
+            'https://www.cell.com/neuron/inpress.rss',
+            'https://www.cell.com/trends/neurosciences/current.rss',
+            'https://www.cell.com/trends/neurosciences/inpress.rss',
+            'https://www.cell.com/current-biology/current.rss',
+            'https://www.cell.com/current-biology/inpress.rss'
+        ],
+        reviews: [
+            'https://www.annualreviews.org/rss/content/journals/cellbio/latestarticles?fmt=rss',
+            'https://www.annualreviews.org/rss/content/journals/neuro/latestarticles?fmt=rss'
+        ],
+        neuro: [
+            'https://neuraldevelopment.biomedcentral.com/articles/most-recent/rss.xml',
+            'https://www.eneuro.org/rss/ahead.xml'
+        ],
+        elife: [
+            'https://elifesciences.org/rss/digests.xml',
+            'https://elifesciences.org/rss/subject/developmental-biology.xml'
+        ]
+    };
 
-const handleRequest = async (env, request) => {
+    const getRandomFeed = () => {
+        const feedKeys = Object.keys(FEED_GROUPS);
+        const randomKey = feedKeys[Math.floor(Math.random() * feedKeys.length)];
+        let selectedFeed = FEED_GROUPS[randomKey];
+        if (Array.isArray(selectedFeed)) {
+            selectedFeed = selectedFeed[Math.floor(Math.random() * selectedFeed.length)];
+        }
+        return selectedFeed;
+    };
+
     const origin = request.headers['origin'] || request.headers['Origin'];
     const isAllowed = !origin || origin == 'https://dash.cloudflare.com' ||
         origin.endsWith('yhl.ac.cn');
@@ -178,9 +182,5 @@ const handleRequest = async (env, request) => {
             ...corsHeaders,
             'Content-Type': 'application/json'
         }
-    })
-}
-
-export default async function handler(request, env) {
-    return handleRequest(env, request);
+    });
 }
