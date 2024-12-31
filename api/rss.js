@@ -126,7 +126,8 @@ export default async function handler(request, env) {
 
     const items = text.match(itemRegex) || []
     const validItems = items.filter(item => {
-        const description = item.match(descriptionRegex)?.[1] || ''
+        const matchResult = item.match(descriptionRegex);
+        const description = matchResult && matchResult[1] ? matchResult[1] : '';
         return description
             .replace('ABSTRACT', '')
             .replace(/&lt;|&gt;/g, match => htmlEntitiesMap[match])
