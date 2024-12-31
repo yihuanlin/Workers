@@ -24,7 +24,7 @@ const createResponse = async (weatherData, locationData) => {
 }
 
 export const config = {
-    runtime: 'edge'
+    runtime: 'Node.js'
 };
 
 export default async function handler(request) {
@@ -51,7 +51,8 @@ export default async function handler(request) {
     if (response) return response
 
     let city
-    let { latitude, longitude } = request.cf || {}
+    let latitude = request.cf?.latitude;
+    let longitude = request.cf?.longitude;
     if (!latitude || !longitude) {
         const ip = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip')
         const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${env.IPGEO_KEY}&ip=${ip}`)

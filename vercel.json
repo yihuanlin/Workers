@@ -11,10 +11,6 @@
     {
       "source": "/weather",
       "destination": "/api/weather"
-    },
-    {
-      "source": "/wallpaper",
-      "destination": "/api/wallpaper"
     }
   ]
 }

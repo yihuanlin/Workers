@@ -37,7 +37,7 @@ const getRandomFeed = () => {
 };
 
 const handleRequest = async (env, request) => {
-    const origin = request.headers.get('Origin');
+    const origin = request.headers['origin'] || request.headers['Origin'];
     const isAllowed = !origin || origin == 'https://dash.cloudflare.com' ||
         origin.endsWith('yhl.ac.cn');
     if (!isAllowed) {
