@@ -2,15 +2,7 @@
   "rewrites": [
     {
       "source": "/cors",
-      "destination": "/api/cors"
-    },
-    {
-      "source": "/rss",
-      "destination": "/api/rss"
-    },
-    {
-      "source": "/weather",
-      "destination": "/api/weather"
+      "destination": "/"
     }
   ]
 }
