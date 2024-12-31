@@ -23,92 +23,96 @@ const createResponse = async (weatherData, locationData) => {
     );
 }
 
-export default {
-    async fetch(request, env) {
-        const origin = request.headers.get('Origin');
+export const config = {
+    runtime: 'edge'
+};
 
-        const isAllowed = !origin || origin == 'https://dash.cloudflare.com' ||
-            origin.endsWith('yhl.ac.cn');
+export default async function handler(request) {
+    const env = process.env;
+    const origin = request.headers.get('Origin');
 
-        if (!isAllowed) {
-            return new Response(
-                JSON.stringify({ error: `Access denied` }),
-                {
-                    status: 403,
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+    const isAllowed = !origin || origin == 'https://dash.cloudflare.com' ||
+        origin.endsWith('yhl.ac.cn');
+
+    if (!isAllowed) {
+        return new Response(
+            JSON.stringify({ error: `Access denied` }),
+            {
+                status: 403,
+                headers: {
+                    'Content-Type': 'application/json'
                 }
-            );
-        }
-
-        const cache = caches.default
-        let response = await cache.match(request)
-        if (response) return response
-
-        let city
-        const { latitude, longitude } = request.cf || {}
-        if (!latitude || !longitude) {
-            const ip = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip')
-            const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${env.IPGEO_KEY}&ip=${ip}`)
-            if (!geoResponse.ok) {
-                return new Response(
-                    JSON.stringify({ error: 'Failed to fetch geolocation data' }),
-                    {
-                        status: 500,
-                        headers: { 'Content-Type': 'application/json' }
-                    }
-                )
             }
-            const geoData = await geoResponse.json()
-            latitude = geoData.latitude
-            longitude = geoData.longitude
-            city = geoData.city
-        }
+        );
+    }
 
-        const apiKey = env.OPENWEATHER_API_KEY
-        const weatherUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&units=metric&appid=${apiKey}`
-        const geocodeUrl = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${apiKey}`
+    const cache = caches.default
+    let response = await cache.match(request)
+    if (response) return response
 
-        try {
-            if (city) {
-                const weatherResponse = await fetch(weatherUrl)
-                if (!weatherResponse.ok) {
-                    throw new Error(`Weather service error: ${weatherResponse.status}`)
-                }
-                const weatherData = await weatherResponse.json()
-                response = createResponse(weatherData, { name: city })
-            } else {
-                const [weatherResponse, geocodeResponse] = await Promise.all([
-                    fetch(weatherUrl),
-                    fetch(geocodeUrl)
-                ])
-
-                if (!weatherResponse.ok || !geocodeResponse.ok) {
-                    const errorMessage = !weatherResponse.ok
-                        ? `Weather service error: ${weatherResponse.status}`
-                        : `Geocoding service error: ${geocodeResponse.status}`
-                    throw new Error(errorMessage)
-                }
-
-                const weatherData = await weatherResponse.json()
-                const [locationData] = await geocodeResponse.json()
-                response = createResponse(weatherData, locationData)
-            }
-
-            await cache.put(request, response.clone())
-            return response
-        } catch (error) {
+    let city
+    const { latitude, longitude } = request.cf || {}
+    if (!latitude || !longitude) {
+        const ip = request.headers.get('x-forwarded-for') || request.headers.get('cf-connecting-ip')
+        const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${env.IPGEO_KEY}&ip=${ip}`)
+        if (!geoResponse.ok) {
             return new Response(
-                JSON.stringify({ error: error.message }),
+                JSON.stringify({ error: 'Failed to fetch geolocation data' }),
                 {
                     status: 500,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Access-Control-Allow-Origin': '*'
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 }
             )
         }
+        const geoData = await geoResponse.json()
+        latitude = geoData.latitude
+        longitude = geoData.longitude
+        city = geoData.city
     }
+
+    const apiKey = env.OPENWEATHER_API_KEY
+    const weatherUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&units=metric&appid=${apiKey}`
+    const geocodeUrl = `https://api.openweathermap.org/geo/1.0/reverse?lat=${latitude}&lon=${longitude}&limit=1&appid=${apiKey}`
+
+    try {
+        if (city) {
+            const weatherResponse = await fetch(weatherUrl)
+            if (!weatherResponse.ok) {
+                throw new Error(`Weather service error: ${weatherResponse.status}`)
+            }
+            const weatherData = await weatherResponse.json()
+            response = createResponse(weatherData, { name: city })
+        } else {
+            const [weatherResponse, geocodeResponse] = await Promise.all([
+                fetch(weatherUrl),
+                fetch(geocodeUrl)
+            ])
+
+            if (!weatherResponse.ok || !geocodeResponse.ok) {
+                const errorMessage = !weatherResponse.ok
+                    ? `Weather service error: ${weatherResponse.status}`
+                    : `Geocoding service error: ${geocodeResponse.status}`
+                throw new Error(errorMessage)
+            }
+
+            const weatherData = await weatherResponse.json()
+            const [locationData] = await geocodeResponse.json()
+            response = createResponse(weatherData, locationData)
+        }
+
+        await cache.put(request, response.clone())
+        return response
+    } catch (error) {
+        return new Response(
+            JSON.stringify({ error: error.message }),
+            {
+                status: 500,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                }
+            }
+        )
+    }
+}
 }

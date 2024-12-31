@@ -194,8 +194,6 @@ const handleRequest = async (env, request) => {
     })
 }
 
-export default {
-    async fetch(request, env, ctx) {
-        return handleRequest(env, request);
-    }
+export default async function fetch(request, env) {
+    return handleRequest(env, request);
 }
