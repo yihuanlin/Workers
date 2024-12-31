@@ -51,7 +51,12 @@ const handleRequest = async (env, request) => {
             }
         );
     }
-    const url = new URL(request.url);
+    const url = request.url.startsWith('http')
+        ? new URL(request.url)
+        : new URL(request.url, process.env.VERCEL_URL
+            ? `https://${process.env.VERCEL_URL}`
+            : 'http://localhost:3000');
+
     let corsUrl = url.searchParams.get('url');
     const summary = url.searchParams.get('summary');
 
