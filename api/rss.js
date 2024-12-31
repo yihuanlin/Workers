@@ -126,8 +126,7 @@ export default async function handler(request, env) {
 
     const items = text.match(itemRegex) || []
     const validItems = items.filter(item => {
-        const matchResult = item.match(descriptionRegex);
-        const description = matchResult && matchResult[1] ? matchResult[1] : '';
+        const description = item.match(descriptionRegex)?.[1] || ''
         return description
             .replace('ABSTRACT', '')
             .replace(/&lt;|&gt;/g, match => htmlEntitiesMap[match])
@@ -139,7 +138,10 @@ export default async function handler(request, env) {
     let result = {}
     if (validItems.length > 0) {
         const randomItem = validItems[Math.floor(Math.random() * validItems.length)]
-        const getTagContent = (tag) => randomItem.match(new RegExp(`<${tag}[^>]*>(.*?)<\/${tag}>`, 's'))?.[1] || ''
+        const getTagContent = (tag) => {
+            const match = randomItem.match(new RegExp(`<${tag}[^>]*>(.*?)<\/${tag}>`, 's'));
+            return match && match[1] ? match[1] : '';
+        }
         let title = getTagContent('title').replace(/\s+/g, ' ').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
         title = (/[.!?]$/.test(title) ? title : title + '.').replace(/&lt;i&gt;(.*?)&lt;\/i&gt;/g, '<em>$1</em>')
 
