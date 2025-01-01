@@ -20,5 +20,28 @@
     "url": "https://github.com/yihuanlin/Workers/issues"
   },
   "homepage": "https://github.com/yihuanlin/Workers#readme",
-  "description": ""
+  "description": "",
+  "vercel": {
+    "routes": [
+      {
+        "handle": "filesystem"
+      },
+      {
+        "src": "/cors",
+        "dest": "/api/cors.js"
+      },
+      {
+        "src": "/rss",
+        "dest": "/api/rss.js"
+      },
+      {
+        "src": "/weather",
+        "dest": "/api/weather.js"
+      },
+      {
+        "src": "/wallpaper",
+        "dest": "/api/wallpaper.js"
+      }
+    ]
+  }
 }
