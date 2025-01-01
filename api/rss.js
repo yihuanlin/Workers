@@ -68,7 +68,6 @@ export default async function handler(request, env) {
     let text;
     let response;
     let items;
-    let validItems = [];
     let corsRequest;
     const itemRegex = /<item[^>]*>[\s\S]*?<\/item>/g
     const descriptionRegex = /<description[^>]*>([\s\S]*?)<\/description>/
@@ -87,16 +86,16 @@ export default async function handler(request, env) {
             response = await fetch(corsRequest);
             text = await response.text();
             items = text.match(itemRegex) || []
-            validItems = items.filter(item => {
-                const description = item.match(descriptionRegex)?.[1] || ''
-                return description
+            items = items.filter(item => {
+                return ((item.match(descriptionRegex) || [])[1] || '')
                     .replace('ABSTRACT', '')
-                    .replace(/&lt;|&gt;/g, match => htmlEntitiesMap[match])
+                    .replace(']]>', '')
+                    .replace(/&lt;|&gt;/g, match => ({ '&lt;': '<', '&gt;': '>' })[match])
                     .replace(/<[^>]+>/g, '')
                     .replace(/\s+/g, ' ')
-                    .trim() !== ''
+                    .trim();
             })
-            if (validItems.length > 0) {
+            if (items.length > 0) {
                 break;
             }
         } catch (error) {
@@ -117,7 +116,7 @@ export default async function handler(request, env) {
         }
     }
 
-    const randomItem = validItems[Math.floor(Math.random() * validItems.length)]
+    const randomItem = items[Math.floor(Math.random() * items.length)]
     const getTagContent = (tag) => randomItem.match(new RegExp(`<${tag}[^>]*>(.*?)<\/${tag}>`, 's'))?.[1] || ''
     let title = getTagContent('title').replace(/\s+/g, ' ').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
     title = (/[.!?]$/.test(title) ? title : title + '.').replace(/&lt;i&gt;(.*?)&lt;\/i&gt;/g, '<em>$1</em>')
