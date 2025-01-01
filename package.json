@@ -4,8 +4,6 @@
   },
   "name": "workers",
   "version": "1.0.0",
-  "main": "index.js",
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -20,28 +18,5 @@
     "url": "https://github.com/yihuanlin/Workers/issues"
   },
   "homepage": "https://github.com/yihuanlin/Workers#readme",
-  "description": "",
-  "vercel": {
-    "routes": [
-      {
-        "handle": "filesystem"
-      },
-      {
-        "src": "/cors",
-        "dest": "/api/cors.js"
-      },
-      {
-        "src": "/rss",
-        "dest": "/api/rss.js"
-      },
-      {
-        "src": "/weather",
-        "dest": "/api/weather.js"
-      },
-      {
-        "src": "/wallpaper",
-        "dest": "/api/wallpaper.js"
-      }
-    ]
-  }
+  "description": ""
 }
