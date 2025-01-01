@@ -60,7 +60,6 @@ export default async function handler(request) {
             }
         );
     }
-    let corsUrl = getRandomFeed();
 
     const corsHeaders = {
         'Access-Control-Allow-Origin': '*',
@@ -76,20 +75,24 @@ export default async function handler(request) {
             headers: corsHeaders,
         })
     }
+    let url = getRandomFeed();
     let attempts = 0;
     let text;
     let response;
     let items;
-    let corsRequest;
+    let feedRequest;
 
     while (attempts < 3) {
-        corsRequest = new Request(corsUrl, {
+        feedRequest = new Request(url, {
             method: 'GET',
             redirect: 'follow'
         })
 
         try {
-            response = await fetch(corsRequest);
+            response = await fetch(feedRequest, {
+                cache: 'force-cache',
+                next: { revalidate: 86400 }
+            });
             text = await response.text();
             const parser = new XMLParser();
             const xmlDoc = parser.parse(text);
@@ -117,8 +120,8 @@ export default async function handler(request) {
 
         attempts++;
         if (attempts < 3) {
-            console.log(`Failed to fetch ${corsUrl}`);
-            corsUrl = getRandomFeed();
+            console.log(`Failed to fetch ${url}`);
+            url = getRandomFeed();
         } else {
             return new Response(JSON.stringify({ error: 'Failed to fetch feed after 3 attempts' }), {
                 status: 502,

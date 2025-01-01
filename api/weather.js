@@ -28,7 +28,9 @@ export default async function handler(request) {
         const { latitude, longitude, city } = await geolocation(request)
         const cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
         const weatherUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&units=metric&appid=${env.OPENWEATHER_API_KEY}`
-        const weatherResponse = await fetch(weatherUrl)
+        const weatherResponse = await fetch(weatherUrl, {
+            next: { revalidate: 86400 }
+        })
         if (!weatherResponse.ok) {
             throw new Error(`Weather service error: ${weatherResponse.status}`)
         }
