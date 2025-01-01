@@ -1,3 +1,5 @@
+const { XMLParser } = require('fast-xml-parser');
+
 export const config = {
     runtime: 'edge'
 };
@@ -20,6 +22,14 @@ export default async function handler(request, env) {
         neuro: [
             'https://neuraldevelopment.biomedcentral.com/articles/most-recent/rss.xml',
             'https://www.eneuro.org/rss/ahead.xml'
+        ],
+        reviews: [
+            'https://www.annualreviews.org/rss/content/journals/cellbio/latestarticles?fmt=rss',
+            'https://www.annualreviews.org/rss/content/journals/neuro/latestarticles?fmt=rss'
+        ],
+        elife: [
+            'https://elifesciences.org/rss/digests.xml',
+            'https://elifesciences.org/rss/subject/developmental-biology.xml'
         ]
     };
 
@@ -63,18 +73,11 @@ export default async function handler(request, env) {
             headers: corsHeaders,
         })
     }
-
     let attempts = 0;
     let text;
     let response;
     let items;
     let corsRequest;
-    const itemRegex = /<item[^>]*>[\s\S]*?<\/item>/g
-    const descriptionRegex = /<description[^>]*>([\s\S]*?)<\/description>/
-    const htmlEntitiesMap = {
-        '&lt;': '<',
-        '&gt;': '>'
-    }
 
     while (attempts < 3) {
         corsRequest = new Request(corsUrl, {
@@ -85,16 +88,23 @@ export default async function handler(request, env) {
         try {
             response = await fetch(corsRequest);
             text = await response.text();
-            items = text.match(itemRegex) || []
+            const parser = new XMLParser();
+            const xmlDoc = parser.parse(text);
+            items = xmlDoc.rss?.channel?.item || xmlDoc['rdf:RDF']?.item || [];
+
+            if (!Array.isArray(items)) {
+                items = [items];
+            }
+
             items = items.filter(item => {
-                return ((item.match(descriptionRegex) || [])[1] || '')
+                const description = item.description || '';
+                const cleanDescription = description
                     .replace('ABSTRACT', '')
-                    .replace(']]>', '')
-                    .replace(/&lt;|&gt;/g, match => ({ '&lt;': '<', '&gt;': '>' })[match])
-                    .replace(/<[^>]+>/g, '')
-                    .replace(/\s+/g, ' ')
                     .trim();
-            })
+                return cleanDescription &&
+                    !/^<[^>]+>\s*<\/[^>]+>$/.test(cleanDescription);
+            });
+
             if (items.length > 0) {
                 break;
             }
@@ -104,6 +114,7 @@ export default async function handler(request, env) {
 
         attempts++;
         if (attempts < 3) {
+            console.log(`Failed to fetch ${corsUrl}`);
             corsUrl = getRandomFeed();
         } else {
             return new Response(JSON.stringify({ error: 'Failed to fetch feed after 3 attempts' }), {
@@ -116,20 +127,16 @@ export default async function handler(request, env) {
         }
     }
 
-    const randomItem = items[Math.floor(Math.random() * items.length)]
-    const getTagContent = (tag) => randomItem.match(new RegExp(`<${tag}[^>]*>(.*?)<\/${tag}>`, 's'))?.[1] || ''
-    let title = getTagContent('title').replace(/\s+/g, ' ').replace(/<!\[CDATA\[|\]\]>/g, '').trim();
-    title = (/[.!?]$/.test(title) ? title : title + '.').replace(/&lt;i&gt;(.*?)&lt;\/i&gt;/g, '<em>$1</em>')
+    const randomItem = items[Math.floor(Math.random() * items.length)];
+    let title = randomItem.title.trim();
+    title = (/[.!?]$/.test(title) ? title : title + '.');
 
-    let description = getTagContent('description')
+
+    let description = randomItem.description
         .replace('ABSTRACT', '')
-        .replace(']]>', '')
-        .replace(/&lt;|&gt;/g, match => htmlEntitiesMap[match])
-        .replace(/<[^>]+>/g, '')
-        .replace(/\s+/g, ' ')
         .trim();
 
-    if (description.length > 200) {
+    if (description.length > 200 && env.GEMINI_API_KEY) {
         const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
             method: 'POST',
             headers: {
@@ -151,7 +158,7 @@ export default async function handler(request, env) {
 
     const result = {
         title: title,
-        link: getTagContent('link').trim(),
+        link: randomItem.link.trim(),
         description: description
     }
 
