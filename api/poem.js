@@ -46,20 +46,14 @@ export default async function handler(req, res) {
 
     if (method === 'GET') {
         try {
-            let length = await kv.hget('cache', 'length');
-            if (!length) {
-                length = await kv.get('length');
-                if (!length) throw new Error();
-                await kv.hset('cache', { length });
-                await kv.expire('cache', 86400);
-            }
             for (let attempts = 0; attempts < 3; attempts++) {
-                const rand = Math.floor(Math.random() * length);
+                const rand = Math.floor(Math.random() * process.env.POEM_LENGTH);
                 sentence = await kv.hget('sentences', `sentence${rand}`);
                 if (!sentence) {
                     sentence = await kv.get(`sentence${rand}`);
                     if (!sentence) throw new Error();
                     await kv.hset('sentences', { [`sentence${rand}`]: sentence });
+                    return res.status(200).send(sentence);
                 }
                 if (sentence) {
                     return res.status(200).send(sentence);
