@@ -17,17 +17,9 @@ export default async function handler(request, env) {
             'https://www.cell.com/current-biology/current.rss',
             'https://www.cell.com/current-biology/inpress.rss'
         ],
-        reviews: [
-            'https://www.annualreviews.org/rss/content/journals/cellbio/latestarticles?fmt=rss',
-            'https://www.annualreviews.org/rss/content/journals/neuro/latestarticles?fmt=rss'
-        ],
         neuro: [
             'https://neuraldevelopment.biomedcentral.com/articles/most-recent/rss.xml',
             'https://www.eneuro.org/rss/ahead.xml'
-        ],
-        elife: [
-            'https://elifesciences.org/rss/digests.xml',
-            'https://elifesciences.org/rss/subject/developmental-biology.xml'
         ]
     };
 
