@@ -6,6 +6,8 @@ export const config = {
 
 export default async function handler(request) {
     const env = process.env;
+    const { searchParams } = new URL(request.url);
+    const summary = searchParams.get('summary');
     const FEED_GROUPS = {
         development: 'https://journals.biologists.com/rss/site_1000005/1000005.xml',
         cell: [
@@ -137,7 +139,7 @@ export default async function handler(request) {
         .replace('ABSTRACT', '')
         .trim();
 
-    if (description.length > 200 && env.GEMINI_API_KEY) {
+    if (description.length > 200 && env.GEMINI_API_KEY && summary) {
         const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
             method: 'POST',
             headers: {
