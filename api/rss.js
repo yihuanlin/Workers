@@ -4,7 +4,8 @@ export const config = {
     runtime: 'edge'
 };
 
-export default async function handler(request, env) {
+export default async function handler(request) {
+    const env = process.env;
     const FEED_GROUPS = {
         development: 'https://journals.biologists.com/rss/site_1000005/1000005.xml',
         cell: [
