@@ -8,19 +8,19 @@
   "rewrites": [
     {
       "source": "/weather",
-      "destination": "/api/weather"
+      "destination": "/weather"
     },
     {
       "source": "/rss",
-      "destination": "/api/rss"
+      "destination": "/rss"
     },
     {
       "source": "/cors",
-      "destination": "/api/cors"
+      "destination": "/cors"
     },
     {
       "source": "/wallpaper",
-      "destination": "/api/wallpaper"
+      "destination": "/wallpaper"
     }
   ]
 }
