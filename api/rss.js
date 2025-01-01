@@ -22,7 +22,7 @@ export default async function handler(request) {
 
     const env = process.env;
     const { searchParams } = new URL(request.url);
-    const summary = searchParams.get('summary');
+    const summary = searchParams.get('s');
     const FEED_GROUPS = {
         development: 'https://journals.biologists.com/rss/site_1000005/1000005.xml',
         cell: [
@@ -138,40 +138,51 @@ export default async function handler(request) {
     title = (/[.!?]$/.test(title) ? title : title + '.');
 
 
-    let description = randomItem.description
+    let description = decodeURIComponent(randomItem.description)
         .replace('ABSTRACT', '')
         .trim();
 
-    if (description.length > 200 && env.GEMINI_API_KEY && summary) {
-        const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-goog-api-key': env.GEMINI_API_KEY
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: `Summarize the abstract for "${title}" in concise academic style, do not include question and author information: ${description}`
-                    }]
-                }]
-            })
-        });
-        const geminiData = await geminiResponse.json();
-        const ai = { response: geminiData.candidates[0].content.parts[0].text };
-        description = ai.response.replace(/\n/g, ' ').trim();
-    }
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+        async start(controller) {
+            controller.enqueue(encoder.encode(JSON.stringify({
+                title: title,
+                link: randomItem.link.trim(),
+                description: description,
+                isStreaming: description.length > 200 && env.GEMINI_API_KEY && summary ? true : false
+            })));
 
-    const result = {
-        title: title,
-        link: randomItem.link.trim(),
-        description: description
-    }
+            if (description.length > 200 && env.GEMINI_API_KEY && summary) {
+                const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-goog-api-key': env.GEMINI_API_KEY
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `Summarize the abstract for "${title}" in concise academic style, do not include question and author information: ${description}`
+                            }]
+                        }]
+                    })
+                });
+                const geminiData = await geminiResponse.json();
+                description = geminiData.candidates[0].content.parts[0].text.replace(/\n/g, ' ').trim();
+                controller.enqueue(encoder.encode(JSON.stringify({
+                    description: description,
+                    isStreaming: false
+                })));
+            }
+            controller.close();
+        }
+    });
 
-    return new Response(JSON.stringify(result), {
+    return new Response(stream, {
         headers: {
             ...corsHeaders,
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Transfer-Encoding': 'chunked'
         }
     });
 }

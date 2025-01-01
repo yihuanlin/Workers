@@ -56,9 +56,10 @@ export default async function handler(request) {
                 }
             }
         )
-    } catch (error) {
+    } catch {
         try {
-            const weatherApiResponse = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${env.WEATHERAPI_KEY}&q=auto:ip&days=1`)
+            const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
+            const weatherApiResponse = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${env.WEATHERAPI_KEY}&q=${ip}&days=1`)
             if (!weatherApiResponse.ok) throw new Error('Both weather APIs failed')
 
             const data = await weatherApiResponse.json()
