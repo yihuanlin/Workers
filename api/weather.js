@@ -1,3 +1,5 @@
+import { geolocation } from '@vercel/functions';
+
 export const config = {
     runtime: 'edge'
 };
@@ -23,15 +25,8 @@ export default async function handler(request) {
 
     let response;
     try {
-        const ip = request.headers.get('x-forwarded-for')
-        const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${env.IPGEO_KEY}&ip=${ip}`)
-        if (!geoResponse.ok) {
-            throw new Error(`Geolocation service error: ${geoResponse.status}`)
-        }
-        const geoData = await geoResponse.json()
-        const latitude = geoData.latitude
-        const longitude = geoData.longitude
-        const city = geoData.city.replace(/(District|Province|County|City)\b/g, '').trim()
+        const { latitude, longitude, city } = await geolocation(request)
+        const cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
         const weatherUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&units=metric&appid=${env.OPENWEATHER_API_KEY}`
         const weatherResponse = await fetch(weatherUrl)
         if (!weatherResponse.ok) {
@@ -40,7 +35,7 @@ export default async function handler(request) {
         const weatherData = await weatherResponse.json()
         response = new Response(
             JSON.stringify({
-                city: city,
+                city: cleanedCity,
                 temperature: Math.round(weatherData.current.temp),
                 weather: weatherData.current.weather[0].main,
                 description: weatherData.current.weather[0].description.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
