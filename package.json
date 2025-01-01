@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "@vercel/functions": "^1.5.2"
+  },
+  "name": "workers",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yihuanlin/Workers.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yihuanlin/Workers/issues"
+  },
+  "homepage": "https://github.com/yihuanlin/Workers#readme",
+  "description": ""
+}
