@@ -1,0 +1,26 @@
+{
+  "functions": {
+    "api/*.js": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/weather",
+      "destination": "/api/weather"
+    },
+    {
+      "source": "/rss",
+      "destination": "/api/rss"
+    },
+    {
+      "source": "/cors",
+      "destination": "/api/cors"
+    },
+    {
+      "source": "/wallpaper",
+      "destination": "/api/wallpaper"
+    }
+  ]
+}
