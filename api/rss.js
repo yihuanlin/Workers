@@ -87,14 +87,8 @@ export default async function handler(request, env) {
 
     while (attempts < 3) {
         corsRequest = new Request(corsUrl, {
-            method: request.method,
-            headers: request.headers,
-            body: request.method !== 'GET' ? request.body : null,
-            redirect: 'follow',
-            cf: {
-                cacheTtl: 86400,
-                cacheEverything: true
-            }
+            method: 'GET',
+            redirect: 'follow'
         })
 
         try {
@@ -120,17 +114,15 @@ export default async function handler(request, env) {
         attempts++;
         if (attempts < 3) {
             corsUrl = getRandomFeed();
+        } else {
+            return new Response(JSON.stringify({ error: 'Failed to fetch feed after 3 attempts' }), {
+                status: 502,
+                headers: {
+                    ...corsHeaders,
+                    'Content-Type': 'application/json'
+                }
+            });
         }
-    }
-
-    if (!validItems.length > 0) {
-        return new Response(JSON.stringify({ error: 'Failed to fetch feed after 3 attempts' }), {
-            status: 502,
-            headers: {
-                ...corsHeaders,
-                'Content-Type': 'application/json'
-            }
-        });
     }
 
     const randomItem = validItems[Math.floor(Math.random() * validItems.length)]
