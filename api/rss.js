@@ -5,6 +5,21 @@ export const config = {
 };
 
 export default async function handler(request) {
+    const origin = request.headers['origin'] || request.headers['Origin'];
+    const isAllowed = !origin || origin == 'file://' ||
+        origin.endsWith('yhl.ac.cn');
+    if (!isAllowed) {
+        return new Response(
+            JSON.stringify({ error: `Access denied` }),
+            {
+                status: 403,
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+    }
+
     const env = process.env;
     const { searchParams } = new URL(request.url);
     const summary = searchParams.get('summary');
@@ -45,21 +60,6 @@ export default async function handler(request) {
         }
         return selectedFeed;
     };
-
-    const origin = request.headers['origin'] || request.headers['Origin'];
-    const isAllowed = !origin || origin == 'https://dash.cloudflare.com' ||
-        origin.endsWith('yhl.ac.cn');
-    if (!isAllowed) {
-        return new Response(
-            JSON.stringify({ error: `Access denied` }),
-            {
-                status: 403,
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
-        );
-    }
 
     const corsHeaders = {
         'Access-Control-Allow-Origin': '*',

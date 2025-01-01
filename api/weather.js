@@ -8,8 +8,7 @@ export default async function handler(request) {
     const env = process.env;
     const origin = request.headers.get('Origin');
 
-    const isAllowed = !origin || origin == 'https://dash.cloudflare.com' ||
-        origin.endsWith('yhl.ac.cn');
+    const isAllowed = !origin || origin.endsWith('yhl.ac.cn') || origin === 'file://';
 
     if (!isAllowed) {
         return new Response(

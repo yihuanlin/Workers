@@ -5,7 +5,7 @@ export const config = {
 export default async function handler(request) {
     const origin = request.headers.get('Origin');
 
-    const isAllowed = !origin || origin == 'https://dash.cloudflare.com' ||
+    const isAllowed = !origin || origin === 'file://' ||
         origin.endsWith('yhl.ac.cn');
 
     if (!isAllowed) {
