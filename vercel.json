@@ -1,20 +1,20 @@
 {
   "rewrites": [
     {
-      "source": "/api/weather",
-      "destination": "/weather"
+      "source": "/weather",
+      "destination": "/api/weather"
     },
     {
-      "source": "/api/rss",
-      "destination": "/rss"
+      "source": "/rss",
+      "destination": "/api/rss"
     },
     {
-      "source": "/api/wallpaper",
-      "destination": "/wallpaper"
+      "source": "/wallpaper",
+      "destination": "/api/wallpaper"
     },
     {
-      "source": "/api/cors",
-      "destination": "/cors"
+      "source": "/cors",
+      "destination": "/api/cors"
     }
   ],
   "headers": [
