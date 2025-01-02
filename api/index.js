@@ -1,8 +1,5 @@
+export const config = { runtime: 'edge' };
 import { geolocation } from '@vercel/functions';
-
-export const config = {
-    runtime: 'edge',
-};
 
 export default async function handler(request) {
     const { country } = await geolocation(request);

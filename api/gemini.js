@@ -6,22 +6,23 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type'
 };
 
+const apiKey = process.env.GEMINI_API_KEY;
+
 let currentAbortController = null;
 
 export default async function handler(req) {
-    const { searchParams } = new URL(req.url);
     const origin = req.headers.get('origin') || req.headers.get('Origin');
     const method = req.method;
     const isAllowed = !origin || origin === 'file://' || origin.endsWith('yhl.ac.cn');
 
-    if (method === 'OPTIONS') {
-        return new Response(null, { status: 200, headers: corsHeaders });
-    }
     if (!isAllowed) {
         return new Response(JSON.stringify({ error: 'Access denied' }), {
             status: 403,
             headers: { 'Content-Type': 'application/json' }
         });
+    }
+    if (method === 'OPTIONS') {
+        return new Response(null, { status: 200, headers: corsHeaders });
     }
 
     if (method !== 'POST' && method !== 'GET') {
@@ -37,6 +38,7 @@ export default async function handler(req) {
         searchValue = body.searchValue;
         chatHistory = body.chatHistory || [];
     } else {
+        const { searchParams } = new URL(req.url);
         searchValue = searchParams.get('q');
     }
     if (!searchValue) {
@@ -46,71 +48,40 @@ export default async function handler(req) {
         });
     }
 
-    const summary = searchParams.get('s');
-    const encoder = new TextEncoder();
     if (currentAbortController) {
         currentAbortController.abort();
     }
     currentAbortController = new AbortController();
     const signal = currentAbortController.signal;
 
-    const stream = new ReadableStream({
-        async start(controller) {
-            const promises = [];
+    try {
+        const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-goog-api-key': apiKey
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [
+                        ...chatHistory.map(msg => ({ text: msg + '\n' })),
+                        { text: `You are talking to a biologist who may ask biology-related or general questions. Current question: ${searchValue}\nAnswer ideally in a sentence.` }
+                    ]
+                }]
+            }),
+            signal
+        });
 
-            const suggestPromise = fetch(`http://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(searchValue)}`, { signal })
-                .then(r => r.json())
-                .then(([, suggestions]) => {
-                    controller.enqueue(encoder.encode(JSON.stringify({
-                        suggestions,
-                        isStreaming: summary ? true : false
-                    })));
-                    if (!summary) {
-                        controller.close();
-                        currentAbortController = null;
-                    }
-                    return true;
-                });
-            promises.push(suggestPromise);
-
-            if (summary && process.env.GEMINI_API_KEY) {
-                const geminiPromise = fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-goog-api-key': process.env.GEMINI_API_KEY
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [
-                                ...chatHistory.map(msg => ({ text: msg + '\n' })),
-                                { text: `You are talking to a biologist who may ask biology-related or general questions. Current question: ${searchValue}\nAnswer ideally in a sentence.` }
-                            ]
-                        }]
-                    }),
-                    signal
-                })
-                    .then(r => r.json())
-                    .then(data => {
-                        controller.enqueue(encoder.encode(JSON.stringify({
-                            analysis: data.candidates[0]?.content.parts[0]?.text || '',
-                            isStreaming: false
-                        })));
-                        controller.close();
-                        currentAbortController = null;
-                    });
-                promises.push(geminiPromise);
-            }
-            await Promise.all(promises);
-        }
-    });
-
-    return new Response(stream, {
-        headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-            'Transfer-Encoding': 'chunked'
-        }
-    });
-
+        const data = await response.json();
+        return new Response(JSON.stringify({
+            text: data.candidates[0]?.content.parts[0]?.text || ''
+        }), {
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+    }
 }

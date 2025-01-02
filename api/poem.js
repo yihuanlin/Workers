@@ -1,3 +1,4 @@
+export const config = { runtime: 'edge' };
 import { kv } from '@vercel/kv';
 
 const corsHeaders = {
@@ -6,29 +7,35 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type'
 };
 
-export default async function handler(req, res) {
-    const origin = req.headers['origin'] || req.headers['Origin'];
-    const isAllowed = !origin || origin == 'file://' ||
+export default async function handler(req) {
+    const origin = req.headers.get('origin');
+    const isAllowed = !origin || origin === 'file://' ||
         origin.endsWith('yhl.ac.cn');
-    const { method } = req;
-    Object.entries(corsHeaders).forEach(([key, value]) => res.setHeader(key, value));
+    const method = req.method;
 
     if (!isAllowed) {
-        return res.status(403).json({ error: 'Access denied' });
+        return new Response(JSON.stringify({ error: 'Access denied' }), {
+            status: 403,
+            headers: corsHeaders
+        });
     }
 
     if (method === 'OPTIONS') {
-        return res.writeHead(200, corsHeaders).end();
+        return new Response(null, {
+            status: 200,
+            headers: corsHeaders
+        });
     }
 
     if (method === 'POST') {
         try {
-            const { URL, PASSWORD, BATCHSIZE = 40, MAXPUTS = 200, STARTKEY = 0 } = req.body || {};
-            if (!URL || !PASSWORD) return res.status(400).json({ error: 'Missing fields' });
-            if (PASSWORD !== process.env.REQUIRED_PASSWORD) return res.status(401).json({ error: 'Unauthorized' });
+            const body = await req.json();
+            const { URL, PASSWORD, BATCHSIZE = 40, MAXPUTS = 200, STARTKEY = 0 } = body || {};
+            if (!URL || !PASSWORD) return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400, headers: corsHeaders });
+            if (PASSWORD !== process.env.REQUIRED_PASSWORD) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
 
             const response = await fetch(URL);
-            if (!response.ok) return res.status(response.status).json({ error: 'Failed to fetch URL' });
+            if (!response.ok) return new Response(JSON.stringify({ error: 'Failed to fetch URL' }), { status: response.status, headers: corsHeaders });
             const quotes = (await response.text()).split('\n').filter(Boolean);
 
             let putCount = 0;
@@ -44,14 +51,18 @@ export default async function handler(req, res) {
             const newLength = Math.max(STARTKEY + putCount + 1);
             await kv.set('length', newLength);
 
-            return res.status(200).json({ success: true, totalLength: newLength, added: putCount });
+            return new Response(JSON.stringify({ success: true, totalLength: newLength, added: putCount }), {
+                status: 200,
+                headers: corsHeaders
+            });
         } catch (e) {
-            return res.status(500).json({ error: e.message });
+            return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
         }
     }
 
     if (method === 'GET') {
         try {
+            let sentence;
             for (let attempts = 0; attempts < 3; attempts++) {
                 const rand = Math.floor(Math.random() * process.env.POEM_LENGTH);
                 sentence = await kv.hget('sentences', `sentence${rand}`);
@@ -59,16 +70,17 @@ export default async function handler(req, res) {
                     sentence = await kv.get(`sentence${rand}`);
                     if (!sentence) throw new Error();
                     await kv.hset('sentences', { [`sentence${rand}`]: sentence });
-                    return res.status(200).send(sentence);
+                    return new Response(sentence, { status: 200, headers: corsHeaders });
                 }
                 if (sentence) {
-                    return res.status(200).send(sentence);
+                    return new Response(sentence, { status: 200, headers: corsHeaders });
                 }
-                return res.status(500).json({ error: 'Failed to get valid sentence' });
             }
+            return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
         } catch (e) {
-            return res.status(500).json({ error: e.message });
+            return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
         }
     }
-    return res.status(405).json({ error: 'Method not allowed' });
+
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders });
 }

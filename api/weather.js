@@ -1,9 +1,5 @@
+export const config = { runtime: 'edge' };
 import { geolocation } from '@vercel/functions';
-
-export const config = {
-    runtime: 'edge'
-};
-
 const env = process.env;
 
 export default async function handler(request) {

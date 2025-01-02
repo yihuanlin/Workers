@@ -1,8 +1,6 @@
+export const config = { runtime: 'edge' };
 const { XMLParser } = require('fast-xml-parser');
-
-export const config = {
-    runtime: 'edge'
-};
+const env = process.env;
 
 const feedGroups = {
     development: 'https://journals.biologists.com/rss/site_1000005/1000005.xml',
@@ -49,8 +47,6 @@ const corsHeaders = {
     'Access-Control-Expose-Headers': '*',
     'Cache-Control': 'private, max-age=0, stale-while-revalidate=31536000'
 };
-
-const env = process.env;
 
 export default async function handler(request) {
     const origin = request.headers['origin'] || request.headers['Origin'];
