@@ -8,6 +8,10 @@
   },
   "rewrites": [
     {
+      "source": "/file/:path*",
+      "destination": "https://gqww27ubhjuwtdoc.public.blob.vercel-storage.com/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/api/$1"
     }
