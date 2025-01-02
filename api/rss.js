@@ -4,6 +4,54 @@ export const config = {
     runtime: 'edge'
 };
 
+const feedGroups = {
+    development: 'https://journals.biologists.com/rss/site_1000005/1000005.xml',
+    cell: [
+        'https://www.cell.com/developmental-cell/current.rss',
+        'https://www.cell.com/developmental-cell/inpress.rss',
+        'https://www.cell.com/cell/current.rss',
+        'https://www.cell.com/cell/inpress.rss',
+        'https://www.cell.com/neuron/current.rss',
+        'https://www.cell.com/neuron/inpress.rss',
+        'https://www.cell.com/trends/neurosciences/current.rss',
+        'https://www.cell.com/trends/neurosciences/inpress.rss',
+        'https://www.cell.com/current-biology/current.rss',
+        'https://www.cell.com/current-biology/inpress.rss'
+    ],
+    neuro: [
+        'https://neuraldevelopment.biomedcentral.com/articles/most-recent/rss.xml',
+        'https://www.eneuro.org/rss/ahead.xml'
+    ],
+    reviews: [
+        'https://www.annualreviews.org/rss/content/journals/cellbio/latestarticles?fmt=rss',
+        'https://www.annualreviews.org/rss/content/journals/neuro/latestarticles?fmt=rss'
+    ],
+    elife: [
+        'https://elifesciences.org/rss/digests.xml',
+        'https://elifesciences.org/rss/subject/developmental-biology.xml'
+    ]
+};
+
+const getRandomFeed = () => {
+    const feedKeys = Object.keys(feedGroups);
+    const randomKey = feedKeys[Math.floor(Math.random() * feedKeys.length)];
+    let selectedFeed = feedGroups[randomKey];
+    if (Array.isArray(selectedFeed)) {
+        selectedFeed = selectedFeed[Math.floor(Math.random() * selectedFeed.length)];
+    }
+    return selectedFeed;
+};
+
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, HEAD, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Expose-Headers': '*',
+    'Cache-Control': 'private, max-age=0, stale-while-revalidate=31536000'
+};
+
+const env = process.env;
+
 export default async function handler(request) {
     const origin = request.headers['origin'] || request.headers['Origin'];
     const isAllowed = !origin || origin == 'file://' ||
@@ -20,54 +68,8 @@ export default async function handler(request) {
         );
     }
 
-    const env = process.env;
     const { searchParams } = new URL(request.url);
     const summary = searchParams.get('s');
-    const FEED_GROUPS = {
-        development: 'https://journals.biologists.com/rss/site_1000005/1000005.xml',
-        cell: [
-            'https://www.cell.com/developmental-cell/current.rss',
-            'https://www.cell.com/developmental-cell/inpress.rss',
-            'https://www.cell.com/cell/current.rss',
-            'https://www.cell.com/cell/inpress.rss',
-            'https://www.cell.com/neuron/current.rss',
-            'https://www.cell.com/neuron/inpress.rss',
-            'https://www.cell.com/trends/neurosciences/current.rss',
-            'https://www.cell.com/trends/neurosciences/inpress.rss',
-            'https://www.cell.com/current-biology/current.rss',
-            'https://www.cell.com/current-biology/inpress.rss'
-        ],
-        neuro: [
-            'https://neuraldevelopment.biomedcentral.com/articles/most-recent/rss.xml',
-            'https://www.eneuro.org/rss/ahead.xml'
-        ],
-        reviews: [
-            'https://www.annualreviews.org/rss/content/journals/cellbio/latestarticles?fmt=rss',
-            'https://www.annualreviews.org/rss/content/journals/neuro/latestarticles?fmt=rss'
-        ],
-        elife: [
-            'https://elifesciences.org/rss/digests.xml',
-            'https://elifesciences.org/rss/subject/developmental-biology.xml'
-        ]
-    };
-
-    const getRandomFeed = () => {
-        const feedKeys = Object.keys(FEED_GROUPS);
-        const randomKey = feedKeys[Math.floor(Math.random() * feedKeys.length)];
-        let selectedFeed = FEED_GROUPS[randomKey];
-        if (Array.isArray(selectedFeed)) {
-            selectedFeed = selectedFeed[Math.floor(Math.random() * selectedFeed.length)];
-        }
-        return selectedFeed;
-    };
-
-    const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, HEAD, POST, PUT, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': '*',
-        'Access-Control-Expose-Headers': '*',
-        'Cache-Control': 'private, max-age=0, stale-while-revalidate=31536000'
-    }
 
     if (request.method === 'OPTIONS') {
         return new Response(null, {
@@ -149,10 +151,10 @@ export default async function handler(request) {
                 title: title,
                 link: randomItem.link.trim(),
                 description: description,
-                isStreaming: description.length > 200 && env.GEMINI_API_KEY && summary ? true : false
+                isStreaming: description.length > 200 && summary ? true : false
             })));
 
-            if (description.length > 200 && env.GEMINI_API_KEY && summary) {
+            if (description.length > 200 && summary) {
                 const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
                     method: 'POST',
                     headers: {

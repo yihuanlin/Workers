@@ -7,9 +7,15 @@ const corsHeaders = {
 };
 
 export default async function handler(req, res) {
+    const origin = req.headers['origin'] || req.headers['Origin'];
+    const isAllowed = !origin || origin == 'file://' ||
+        origin.endsWith('yhl.ac.cn');
     const { method } = req;
-
     Object.entries(corsHeaders).forEach(([key, value]) => res.setHeader(key, value));
+
+    if (!isAllowed) {
+        return res.status(403).json({ error: 'Access denied' });
+    }
 
     if (method === 'OPTIONS') {
         return res.writeHead(200, corsHeaders).end();
@@ -63,6 +69,6 @@ export default async function handler(req, res) {
         } catch (e) {
             return res.status(500).json({ error: e.message });
         }
-        return res.status(405).json({ error: 'Method not allowed' });
     }
+    return res.status(405).json({ error: 'Method not allowed' });
 }
