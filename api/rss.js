@@ -132,12 +132,13 @@ export default async function handler(request) {
     }
 
     const randomItem = items[Math.floor(Math.random() * items.length)];
-    let title = randomItem.title.trim();
+    let title = randomItem.title.replace(/<i>(.*?)<\/i>/g, '<em>$1</em>').trim();
     title = (/[.!?]$/.test(title) ? title : title + '.');
 
 
     let description = decodeURIComponent(randomItem.description)
         .replace('ABSTRACT', '')
+        .replace(/<i>(.*?)<\/i>/g, '<em>$1</em>')
         .trim();
 
     const encoder = new TextEncoder();
@@ -166,7 +167,7 @@ export default async function handler(request) {
                     })
                 });
                 const data = await geminiResponse.json();
-                description = data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<i>$1</i>').trim();
+                description = data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim();
                 controller.enqueue(encoder.encode(JSON.stringify({
                     description: description,
                     isStreaming: false

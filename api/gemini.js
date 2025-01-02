@@ -65,7 +65,7 @@ export default async function handler(req) {
 
         const data = await response.json();
         return new Response(JSON.stringify({
-            text: data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<i>$1</i>').trim()
+            text: data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim()
         }), {
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
