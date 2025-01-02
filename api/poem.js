@@ -70,10 +70,12 @@ export default async function handler(req) {
                     sentence = await kv.get(`sentence${rand}`);
                     if (!sentence) throw new Error();
                     await kv.hset('sentences', { [`sentence${rand}`]: sentence });
-                    return new Response(sentence, { status: 200, headers: corsHeaders });
+                    const { _id, ...sentenceWithoutId } = sentence;
+                    return new Response(JSON.stringify(sentenceWithoutId), { status: 200, headers: corsHeaders });
                 }
                 if (sentence) {
-                    return new Response(sentence, { status: 200, headers: corsHeaders });
+                    const { _id, ...sentenceWithoutId } = sentence;
+                    return new Response(JSON.stringify(sentenceWithoutId), { status: 200, headers: corsHeaders });
                 }
             }
             return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
