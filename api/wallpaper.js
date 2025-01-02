@@ -33,7 +33,6 @@ const getBingWallpaper = async () => {
             title: imageData.title,
             link: imageData.copyrightlink,
             description: imageData.copyright,
-            date: imageData.startdate,
             color: avgColor
         };
 
@@ -53,7 +52,6 @@ module.exports = async (req, res) => {
         try {
             if (req.query.type === 'image') {
                 const image = await fs.readFile('/tmp/wallpaper.webp');
-
                 res.setHeader('Content-Type', 'image/webp');
                 res.send(image);
                 return;
