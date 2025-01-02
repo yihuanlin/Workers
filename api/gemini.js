@@ -8,8 +8,6 @@ const corsHeaders = {
 
 const apiKey = process.env.GEMINI_API_KEY;
 
-let currentAbortController = null;
-
 export default async function handler(req) {
     const origin = req.headers.get('origin') || req.headers.get('Origin');
     const method = req.method;
@@ -48,12 +46,6 @@ export default async function handler(req) {
         });
     }
 
-    if (currentAbortController) {
-        currentAbortController.abort();
-    }
-    currentAbortController = new AbortController();
-    const signal = currentAbortController.signal;
-
     try {
         const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
             method: 'POST',
@@ -68,8 +60,7 @@ export default async function handler(req) {
                         { text: `You are talking to a biologist who may ask biology-related or general questions. Current question: ${searchValue}\nAnswer ideally in a sentence.` }
                     ]
                 }]
-            }),
-            signal
+            })
         });
 
         const data = await response.json();
