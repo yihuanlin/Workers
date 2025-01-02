@@ -2,7 +2,8 @@
   "dependencies": {
     "@vercel/functions": "^1.5.2",
     "@vercel/kv": "^3.0.0",
-    "fast-xml-parser": "^4.5.1"
+    "fast-xml-parser": "^4.5.1",
+    "sharp": "^0.33.5"
   },
   "name": "workers",
   "version": "1.0.0",
