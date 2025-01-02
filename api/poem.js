@@ -49,7 +49,6 @@ export default async function handler(req) {
             }
 
             const newLength = Math.max(STARTKEY + putCount + 1);
-            await kv.set('length', newLength);
 
             return new Response(JSON.stringify({ success: true, totalLength: newLength, added: putCount }), {
                 status: 200,

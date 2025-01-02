@@ -49,9 +49,11 @@ const getBingWallpaper = async () => {
 
 module.exports = async (req, res) => {
     if (req.method === 'GET') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
         try {
             if (req.query.type === 'image') {
                 const image = await fs.readFile('/tmp/wallpaper.webp');
+
                 res.setHeader('Content-Type', 'image/webp');
                 res.send(image);
                 return;
