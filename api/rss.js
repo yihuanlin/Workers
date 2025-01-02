@@ -165,8 +165,8 @@ export default async function handler(request) {
                         }]
                     })
                 });
-                const geminiData = await geminiResponse.json();
-                description = geminiData.candidates[0].content.parts[0].text.replace(/\n/g, ' ').trim();
+                const data = await geminiResponse.json();
+                description = data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<i>$1</i>').trim();
                 controller.enqueue(encoder.encode(JSON.stringify({
                     description: description,
                     isStreaming: false
