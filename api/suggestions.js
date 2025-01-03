@@ -45,7 +45,17 @@ export default async function handler(req) {
       headers: { 'Content-Type': 'application/json' }
     });
   }
-  const signal = req.signal;
+  const controller = new AbortController();
+  const signal = controller.signal;
+
+  req.signal.addEventListener('abort', () => {
+    console.warn('Request abort detected');
+    controller.abort();
+  });
+
+  signal.addEventListener('abort', () => {
+    console.warn('Client disconnected');
+  });
   const summary = searchParams.get('s');
   const gemini = summary && searchValue.length > 3
   const encoder = new TextEncoder();
