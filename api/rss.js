@@ -148,7 +148,7 @@ export default async function handler(request) {
 				title: title,
 				link: randomItem.link.trim(),
 				description: description,
-				isStreaming: description.length > 200 && summary ? true : false
+				isGemini: false
 			})));
 
 			if (description.length > 200 && summary) {
@@ -170,7 +170,7 @@ export default async function handler(request) {
 				description = data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim();
 				controller.enqueue(encoder.encode(JSON.stringify({
 					description: description,
-					isStreaming: false
+					isStreaming: true
 				})));
 			}
 			controller.close();

@@ -47,6 +47,7 @@ export default async function handler(req) {
   }
   const signal = req.signal;
   const summary = searchParams.get('s');
+  const gemini = summary && searchValue.length > 3
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -59,12 +60,12 @@ export default async function handler(req) {
           .then(([, suggestions]) => {
             return controller.enqueue(
               encoder.encode(
-                JSON.stringify({ suggestions, isStreaming: !!summary })
+                JSON.stringify({ keys: suggestions, isGemini: false })
               )
             );
           });
 
-        const geminiPromise = summary
+        const geminiPromise = gemini
           ? fetch(geminiUrl, {
             method: 'POST',
             signal,
@@ -87,10 +88,10 @@ export default async function handler(req) {
           })
             .then(r => r.json())
             .then(geminiResult => {
-              const gemini = geminiResult.candidates[0]?.content.parts[0]?.text || '';
+              const geminiResponse = geminiResult.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim() || '';
               return controller.enqueue(
                 encoder.encode(
-                  JSON.stringify({ analysis: gemini, isStreaming: false })
+                  JSON.stringify({ text: geminiResponse, isGemini: true })
                 )
               );
             })
@@ -98,16 +99,16 @@ export default async function handler(req) {
 
         await Promise.all([
           suggestionsPromise,
-          summary ? new Promise(resolve => setTimeout(() => resolve(geminiPromise), 300)) : null
+          gemini ? new Promise(resolve => setTimeout(() => resolve(geminiPromise), 300)) : null
         ]);
       } catch (error) {
         if (error.name === 'AbortError') {
-          controller.error('Request aborted');
         } else {
-          controller.error(error);
+          controller.enqueue(encoder.encode(JSON.stringify({ error: error.message, isGemini: false })));
         }
+      } finally {
+        controller.close();
       }
-      controller.close();
     }
   });
 
@@ -118,5 +119,4 @@ export default async function handler(req) {
       'Transfer-Encoding': 'chunked'
     }
   });
-
 }
