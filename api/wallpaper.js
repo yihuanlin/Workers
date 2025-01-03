@@ -1,20 +1,21 @@
-const sharp = require('sharp');
-const { put } = require('@vercel/blob');
-const { get } = require('@vercel/edge-config');
-const getEdgeConfigDetails = () => {
-	if (!EDGE_CONFIG) return { id: null, token: null };
-	const idMatch = EDGE_CONFIG.match(/ecfg_[a-zA-Z0-9]+/);
-	const tokenMatch = EDGE_CONFIG.match(/token=([^&]+)/);
-	return {
-		id: idMatch ? idMatch[0] : null,
-		token: tokenMatch ? tokenMatch[1] : null
-	};
-};
+import sharp from 'sharp';
+import { put } from '@vercel/blob';
+import { get } from '@vercel/edge-config';
+import { waitUntil } from '@vercel/functions';
+
 const EDGE_CONFIG = process.env.EDGE_CONFIG;
 const API_TOKEN = process.env.VERCEL_API_TOKEN;
 const BLOB_ID = process.env.BLOB_ID;
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_REPO = process.env.GITHUB_REPO;
 const BING_API = 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-GB';
-const { id: EDGE_CONFIG_ID } = getEdgeConfigDetails();
+
+const EDGE_CONFIG_ID = () => {
+	if (!EDGE_CONFIG) return { id: null, token: null };
+	const idMatch = EDGE_CONFIG.match(/ecfg_[a-zA-Z0-9]+/);
+	return idMatch ? idMatch[0] : null;
+};
+
 const set = async (key, value) => {
 	const response = await fetch(`https://api.vercel.com/v1/edge-config/${EDGE_CONFIG_ID}/items`, {
 		method: 'PATCH',
@@ -29,6 +30,141 @@ const set = async (key, value) => {
 	}
 	return response.json();
 };
+
+const uploadToGithub = async (files, message) => {
+	const updates = await Promise.all(files.map(async file => {
+		const getCurrentFile = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${file.path}`, {
+			headers: {
+				'Authorization': `token ${GITHUB_TOKEN}`,
+				'Accept': 'application/vnd.github.v3+json',
+				'User-Agent': 'Wallpaper-Update-Bot'
+			}
+		});
+		const currentFile = await getCurrentFile.json();
+		if (!getCurrentFile.ok) {
+			return {
+				path: file.path,
+				content: file.content,
+				sha: null
+			};
+		}
+
+		if (file.path.endsWith('.json')) {
+			const currentContent = JSON.parse(Buffer.from(currentFile.content, 'base64').toString());
+			const newContent = JSON.parse(Buffer.from(file.content, 'base64').toString());
+			if (currentContent.text === newContent.text &&
+				currentContent.link === newContent.link) {
+				return null;
+			}
+		} else {
+			const blobResponse = await fetch(currentFile.git_url, {
+				headers: {
+					'Authorization': `token ${GITHUB_TOKEN}`,
+					'Accept': 'application/vnd.github.v3+json',
+					'User-Agent': 'Wallpaper-Update-Bot'
+				}
+			});
+			const blob = await blobResponse.json();
+			const content = blob.content;
+			if (content.replace(/\n/g, '') === file.content) {
+				return null;
+			}
+		}
+		return {
+			path: file.path,
+			content: file.content,
+			sha: currentFile.sha
+		};
+	}));
+
+	const validUpdates = updates.filter(update => update !== null);
+	if (validUpdates.length === 0) {
+		return updates;
+	}
+
+	const treeFetch = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/git/trees/main`, {
+		headers: {
+			'Authorization': `token ${GITHUB_TOKEN}`,
+			'Accept': 'application/vnd.github.v3+json',
+			'User-Agent': 'Wallpaper-Update-Bot'
+		}
+	});
+	const mainTree = await treeFetch.json();
+
+	const blobPromises = validUpdates.map(file =>
+		fetch(`https://api.github.com/repos/${GITHUB_REPO}/git/blobs`, {
+			method: 'POST',
+			headers: {
+				'Authorization': `token ${GITHUB_TOKEN}`,
+				'Accept': 'application/vnd.github.v3+json',
+				'User-Agent': 'Wallpaper-Update-Bot'
+			},
+			body: JSON.stringify({
+				content: file.content,
+				encoding: 'base64'
+			})
+		}).then(res => res.json())
+	);
+	const blobs = await Promise.all(blobPromises);
+
+	const treeResponse = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/git/trees`, {
+		method: 'POST',
+		headers: {
+			'Authorization': `token ${GITHUB_TOKEN}`,
+			'Accept': 'application/vnd.github.v3+json',
+			'User-Agent': 'Wallpaper-Update-Bot'
+		},
+		body: JSON.stringify({
+			base_tree: mainTree.sha,
+			tree: validUpdates.map((file, index) => ({
+				path: file.path,
+				mode: '100644',
+				type: 'blob',
+				sha: blobs[index].sha
+			}))
+		})
+	});
+	const newTree = await treeResponse.json();
+
+	const commitResponse = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/git/commits`, {
+		method: 'POST',
+		headers: {
+			'Authorization': `token ${GITHUB_TOKEN}`,
+			'Accept': 'application/vnd.github.v3+json',
+			'User-Agent': 'Wallpaper-Update-Bot'
+		},
+		body: JSON.stringify({
+			message: message,
+			tree: newTree.sha,
+			parents: [mainTree.sha]
+		})
+	});
+	const newCommit = await commitResponse.json();
+
+	const response = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/git/refs/heads/main`, {
+		method: 'PATCH',
+		headers: {
+			'Authorization': `token ${GITHUB_TOKEN}`,
+			'Accept': 'application/vnd.github.v3+json',
+			'User-Agent': 'Wallpaper-Update-Bot'
+		},
+		body: JSON.stringify({
+			sha: newCommit.sha
+		})
+	});
+
+	if (!response.ok) {
+		const responseClone = response.clone();
+		try {
+			const errorData = await response.json();
+			throw new Error(`GitHub API error: ${response.status} - ${errorData.message}`);
+		} catch (e) {
+			throw new Error(`GitHub API error: ${response.status} - ${await responseClone.text()}`);
+		}
+	}
+
+	return updates;
+}
 
 const getBingWallpaper = async () => {
 	const response = await fetch(BING_API);
@@ -68,7 +204,8 @@ const getBingWallpaper = async () => {
 	return { image: webpBuffer, metadata };
 };
 
-module.exports = async (req, res) => {
+export default async (req, res) => {
+	const date = new Date().toISOString().split('T')[0];
 	if (req.method === 'GET') {
 		res.setHeader('Access-Control-Allow-Origin', '*');
 		try {
@@ -94,7 +231,7 @@ module.exports = async (req, res) => {
 				} else {
 					res.status(200).json(metadata);
 				}
-				await Promise.all([
+				waitUntil(Promise.all([
 					put('wallpaper.webp', image, {
 						access: 'public',
 						addRandomSuffix: false,
@@ -103,8 +240,18 @@ module.exports = async (req, res) => {
 						access: 'public',
 						addRandomSuffix: false,
 						contentType: 'application/json'
-					}), set('wallpaper-metadata', metadata)
-				]);
+					}), set('wallpaper-metadata', metadata),
+					uploadToGithub([
+						{
+							path: 'wallpaper.webp',
+							content: image.toString('base64'),
+						},
+						{
+							path: 'metadata.json',
+							content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
+						}
+					], `Update wallpaper and description for ${date}`)
+				]));
 			} catch (error) {
 				res.status(500).json({ error: error.message });
 			}
@@ -122,11 +269,22 @@ module.exports = async (req, res) => {
 					access: 'public',
 					addRandomSuffix: false,
 					contentType: 'application/json'
-				}), set('wallpaper-metadata', metadata)
+				}), set('wallpaper-metadata', metadata),
+				uploadToGithub([
+					{
+						path: 'wallpaper.webp',
+						content: image.toString('base64'),
+					},
+					{
+						path: 'metadata.json',
+						content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
+					}
+				], `Update wallpaper and description for ${date}`)
 			]);
 			res.status(200).json({ success: true });
 		} catch (error) {
 			res.status(500).json({ error: error.message });
 		}
 	}
+	return;
 };

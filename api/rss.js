@@ -1,5 +1,5 @@
 export const config = { runtime: 'edge' };
-const { XMLParser } = require('fast-xml-parser');
+import { XMLParser } from 'fast-xml-parser';
 const env = process.env;
 
 const feedGroups = {
