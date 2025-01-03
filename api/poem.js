@@ -64,14 +64,7 @@ export default async function handler(req) {
 			let sentence;
 			for (let attempts = 0; attempts < 3; attempts++) {
 				const rand = Math.floor(Math.random() * process.env.POEM_LENGTH);
-				sentence = await kv.hget('sentences', `sentence${rand}`);
-				if (!sentence) {
-					sentence = await kv.get(`sentence${rand}`);
-					if (!sentence) throw new Error();
-					await kv.hset('sentences', { [`sentence${rand}`]: sentence });
-					const { _id, ...sentenceWithoutId } = sentence;
-					return new Response(JSON.stringify(sentenceWithoutId), { status: 200, headers: corsHeaders });
-				}
+				sentence = await kv.get(`sentence${rand}`);
 				if (sentence) {
 					const { _id, ...sentenceWithoutId } = sentence;
 					return new Response(JSON.stringify(sentenceWithoutId), { status: 200, headers: corsHeaders });
