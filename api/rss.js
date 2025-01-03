@@ -170,7 +170,7 @@ export default async function handler(request) {
 				description = data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim();
 				controller.enqueue(encoder.encode(JSON.stringify({
 					description: description,
-					isStreaming: true
+					isGemini: true
 				})));
 			}
 			controller.close();
