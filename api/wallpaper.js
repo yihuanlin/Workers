@@ -9,7 +9,6 @@ const BLOB_ID = process.env.BLOB_ID;
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPO = process.env.GITHUB_REPO;
 const BING_API = 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-GB';
-
 const EDGE_CONFIG_ID = !EDGE_CONFIG ? null : EDGE_CONFIG.match(/ecfg_[a-zA-Z0-9]+/)?.[0] ?? null;
 
 const set = async (key, value) => {
@@ -162,10 +161,12 @@ const uploadToGithub = async (files, message) => {
 	return updates;
 }
 
-const getAvgColor = (stats) => '#' + [0, 1, 2]
-	.map(i => Math.min(255, Math.max(0, Math.round(stats.channels[i].mean)))
-		.toString(16).padStart(2, '0'))
-	.join('');
+const getAvgColor = (stats) => {
+	return '#' + [0, 1, 2]
+		.map(i => Math.min(255, Math.max(0, Math.round(stats.channels[i].mean))))
+		.map(val => val.toString(16).padStart(2, '0'))
+		.join('');
+};
 
 const getBingWallpaper = async () => {
 	const response = await fetch(BING_API);
@@ -193,13 +194,18 @@ const getBingWallpaper = async () => {
 		mobileImage.toBuffer()
 	]);
 
+	const [desktopResized, mobileResized] = await Promise.all([
+		sharp(desktopData)
+			.resize({ width: dWidth, height: Math.floor(dHeight * 0.05), position: 'top' })
+			.toBuffer(),
+		sharp(mobileData)
+			.resize({ width: mWidth, height: Math.floor(mHeight * 0.05), position: 'top' })
+			.toBuffer()
+	]);
+
 	const [desktopAvgColor, mobileAvgColor] = await Promise.all([
-		sharp(desktopData).resize({ width: dWidth, height: Math.floor(dHeight * 0.05), position: 'top' })
-			.stats()
-			.then(r => getAvgColor(r)),
-		sharp(mobileData).resize({ width: mWidth, height: Math.floor(mHeight * 0.05), position: 'top' })
-			.stats()
-			.then(r => getAvgColor(r))
+		sharp(desktopResized).stats().then(r => getAvgColor(r)),
+		sharp(mobileResized).stats().then(r => getAvgColor(r))
 	]);
 
 	const [desktopWebpBuffer, mobileWebpBuffer] = await Promise.all([
@@ -210,6 +216,7 @@ const getBingWallpaper = async () => {
 			.webp({ quality: 80 })
 			.toBuffer()
 	]);
+
 	const metadata = {
 		title: imageData.title,
 		link: imageData.copyrightlink,
