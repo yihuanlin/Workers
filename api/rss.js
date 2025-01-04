@@ -147,7 +147,6 @@ export default async function handler(request) {
 			controller.enqueue(encoder.encode(JSON.stringify({
 				title: title,
 				link: randomItem.link.trim(),
-				description: description,
 				isGemini: false
 			})));
 
@@ -168,11 +167,11 @@ export default async function handler(request) {
 				});
 				const data = await geminiResponse.json();
 				description = data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim();
-				controller.enqueue(encoder.encode(JSON.stringify({
-					description: description,
-					isGemini: true
-				})));
-			}
+			};
+			controller.enqueue(encoder.encode(JSON.stringify({
+				description: description,
+				isGemini: true
+			})));
 			controller.close();
 		}
 	});
