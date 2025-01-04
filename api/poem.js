@@ -39,21 +39,37 @@ export default async function handler(req) {
 			const quotes = (await response.text()).split('\n').filter(Boolean);
 
 			let putCount = 0;
+			let log = {
+				putError: null,
+				putErrorPosition: [],
+			};
 			for (let j = 0; j < quotes.length && putCount < MAXPUTS; j += BATCHSIZE) {
-				const batch = quotes.slice(j, j + BATCHSIZE);
-				for (let i = 0; i < batch.length && putCount < MAXPUTS; i++) {
-					const key = `sentence${j + i + STARTKEY}`;
-					await kv.set(key, batch[i]);
-					putCount++;
+				for (let i = 0; i < BATCHSIZE && putCount < MAXPUTS; i++) {
+					try {
+						const index = j + i + STARTKEY;
+						if (index >= quotes.length) {
+							break;
+						}
+						const key = `sentence${index}`;
+						const newQuoteObj = JSON.parse(quotes[index]);
+						delete newQuoteObj._id;
+						const newQuote = JSON.stringify(newQuoteObj);
+						await kv.set(key, newQuote);
+						putCount++;
+					} catch (e) {
+						log.putError = e.message;
+						log.putErrorPosition.push(j + i + STARTKEY);
+					}
 				}
 			}
 
 			const newLength = Math.max(STARTKEY + putCount + 1);
 
-			return new Response(JSON.stringify({ success: true, totalLength: newLength, added: putCount }), {
-				status: 200,
-				headers: corsHeaders
-			});
+			const status = Object.values(log).every(value => value === null || (Array.isArray(value) && value.length === 0)) ? 200 : 500;
+			return new Response(
+				JSON.stringify({ totalLength: newLength, added: putCount, log }),
+				{ status, headers: this.corsHeaders }
+			);
 		} catch (e) {
 			return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
 		}
