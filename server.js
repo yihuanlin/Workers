@@ -5,8 +5,8 @@ const server = createServer(async (req, res) => {
 		const fullUrl = `http://${req.headers.host}${req.url}`;
 		const url = new URL(fullUrl);
 		const path = (url.pathname.slice(1) || 'index').replace(/\//g, '');
-
-		const module = await import(`./api/${path}.js`);
+		const modulePath = path === 'wallpaper' ? 'index' : path;
+		const module = await import(`./api/${modulePath}.js`);
 		// Create request object similar to edge runtime
 		const request = new Request(fullUrl, {
 			method: req.method,

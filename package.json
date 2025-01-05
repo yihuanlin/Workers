@@ -15,11 +15,15 @@
   "version": "1.0.0",
   "scripts": {
     "build": "npm run build:vercel",
-    "build:netlify": "mkdir -p .netlify/functions && cp -r api/* .netlify/functions/",
+    "build:netlify": "mkdir -p .netlify/functions && cp -r api/* .netlify/functions/ && rm .netlify/functions/wallpaper.js",
     "build:vercel": "mkdir -p public && cp -r api/* public/",
     "dev:netlify": "netlify dev",
     "dev:vercel": "vercel dev",
-    "start": "node server.js"
+    "start": "node server.js",
+    "env:vercel": "vercel env pull .env.local",
+    "env:netlify": "netlify env:import .env.local",
+    "env:push-vercel": "cat .env.local | grep -v '^#' | while IFS='=' read -r key value; do if [[ $key =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then vercel env add \"$key\" production <<< \"$value\"; fi; done",
+    "env:push-netlify": "cat .env.local | while IFS= read -r line; do netlify env:set \"${line%%=*}\" \"${line#*=}\"; done"
   },
   "repository": {
     "type": "git",

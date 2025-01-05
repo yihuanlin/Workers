@@ -112,7 +112,7 @@ export default async function handler(request) {
 			if (items.length > 0) {
 				break;
 			}
-		} catch (error) {
+		} catch {
 			// Continue to next attempt
 		}
 
@@ -132,13 +132,23 @@ export default async function handler(request) {
 	}
 
 	const randomItem = items[Math.floor(Math.random() * items.length)];
-	let title = randomItem.title.replace(/<i>(.*?)<\/i>/g, '<em>$1</em>').trim();
+	let title = randomItem.title
+		.replace(/<i>(.*?)<\/i>/g, '<em>$1</em>')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/[\u00A0-\u9999<>\&]/g, (i) => '&#' + i.charCodeAt(0) + ';')
+		.replace(/&#[0-9]+;/g, (x) => String.fromCharCode(parseInt(x.match(/[0-9]+/)[0])))
+		.normalize('NFKC')
+		.trim();
 	title = (/[.!?]$/.test(title) ? title : title + '.');
 
 
 	let description = decodeURIComponent(randomItem.description)
 		.replace('ABSTRACT', '')
 		.replace(/<i>(.*?)<\/i>/g, '<em>$1</em>')
+		.replace(/&nbsp;/g, ' ')
+		.replace(/[\u00A0-\u9999<>\&]/g, (i) => '&#' + i.charCodeAt(0) + ';')
+		.replace(/&#[0-9]+;/g, (x) => String.fromCharCode(parseInt(x.match(/[0-9]+/)[0])))
+		.normalize('NFKC')
 		.trim();
 
 	const encoder = new TextEncoder();

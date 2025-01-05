@@ -1,21 +1,6 @@
 export const config = { runtime: 'edge' };
 import { geolocation } from '@vercel/functions';
 const env = process.env;
-const isNetlify = typeof env.NETLIFY !== 'undefined';
-
-async function getGeoData(request, context) {
-	if (isNetlify) {
-		const { geo } = context;
-		return {
-			latitude: geo.latitude,
-			longitude: geo.longitude,
-			city: geo.city
-		};
-	} else {
-		const { latitude, longitude, city } = await geolocation(request);
-		return { latitude, longitude, city };
-	}
-}
 
 export default async function handler(request) {
 	const origin = request.headers.get('Origin');
@@ -34,10 +19,25 @@ export default async function handler(request) {
 		);
 	}
 
-	let response;
+	let response, latitude, longitude, city, cleanedCity;
 	try {
-		const { latitude, longitude, city } = await getGeoData(request, context);
-		const cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
+		({ latitude, longitude, city } = await geolocation(request))
+		cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
+		if (!latitude || !longitude || !cleanedCity) {
+			throw new Error()
+		}
+	} catch {
+		const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
+		const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${env.IPGEO_KEY}&ip=${ip}`)
+		if (!geoResponse.ok) {
+			throw new Error(`Geolocation service error: ${geoResponse.status}`)
+		}
+		const geoData = await geoResponse.json()
+		latitude = geoData.latitude
+		longitude = geoData.longitude
+		cleanedCity = geoData.city.replace(/(District|Province|County|City)\b/g, '').trim()
+	}
+	try {
 		const weatherUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&units=metric&appid=${env.OPENWEATHER_API_KEY}`
 		const weatherResponse = await fetch(weatherUrl, {
 			next: { revalidate: 86400 }
