@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "dependencies": {
     "@vercel/blob": "^0.27.0",
     "@vercel/edge-config": "^1.4.0",
@@ -7,14 +8,19 @@
     "fast-xml-parser": "^4.5.1",
     "sharp": "^0.33.5"
   },
+  "engines": {
+    "node": "22.x"
+  },
   "name": "workers",
   "version": "1.0.0",
   "scripts": {
     "build": "npm run build:vercel",
     "build:netlify": "mkdir -p .netlify/functions && cp -r api/* .netlify/functions/",
     "build:vercel": "mkdir -p public && cp -r api/* public/",
+    "build:do": "mkdir -p dist && cp -r api server.js package.json dist/",
     "dev:netlify": "netlify dev",
     "dev:vercel": "vercel dev",
+    "dev:do": "doctl apps dev",
     "start": "node server.js"
   },
   "repository": {

@@ -4,3 +4,9 @@ poem
 .env*.local
 .netlify
 public
+template.yaml
+.aws-sam
+app.yaml
+samconfig.toml
+aws.js
+.do

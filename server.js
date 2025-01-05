@@ -4,7 +4,7 @@ const server = createServer(async (req, res) => {
 	try {
 		const fullUrl = `http://${req.headers.host}${req.url}`;
 		const url = new URL(fullUrl);
-		const path = url.pathname.slice(1) || 'index';
+		const path = (url.pathname.slice(1) || 'index').replace(/\//g, '');
 
 		const module = await import(`./api/${path}.js`);
 		// Create request object similar to edge runtime
