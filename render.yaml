@@ -5,13 +5,5 @@ services:
     buildCommand: npm run build:render
     startCommand: node server.js
     routes:
-      - source: /poem
-        destination: /api/poem
-      - source: /weather
-        destination: /api/weather
-      - source: /rss
-        destination: /api/rss
-      - source: /gemini
-        destination: /api/gemini
-      - source: /wallpaper
-        destination: /api/wallpaper
+      - source: /*
+        destination: /api/*
