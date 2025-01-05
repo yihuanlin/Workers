@@ -14,7 +14,8 @@
     "build:netlify": "mkdir -p .netlify/functions && cp -r api/* .netlify/functions/",
     "build:vercel": "mkdir -p public && cp -r api/* public/",
     "dev:netlify": "netlify dev",
-    "dev:vercel": "vercel dev"
+    "dev:vercel": "vercel dev",
+    "start": "node server.js"
   },
   "repository": {
     "type": "git",

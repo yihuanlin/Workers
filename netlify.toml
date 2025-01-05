@@ -9,16 +9,11 @@
 
 [build.environment]
   NETLIFY = "true"
-  NODE_VERSION = "21"
+  NODE_VERSION = "22"
 
 [[redirects]]
   from = "/*"
   to = ".netlify/functions/:splat"
-  status = 200
-
-[[redirects]]
-  from = "/"
-  to = ".netlify/functions/index"
   status = 200
 
 [[headers]]
