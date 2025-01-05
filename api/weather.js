@@ -28,7 +28,7 @@ export default async function handler(request) {
 			next: { revalidate: 86400 }
 		})
 		if (!weatherResponse.ok) {
-			throw new Error(`Weather service error: ${weatherResponse.status}`)
+			throw new Error()
 		}
 		const weatherData = await weatherResponse.json()
 		response = new Response(
@@ -57,7 +57,7 @@ export default async function handler(request) {
 		try {
 			const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip');
 			const weatherApiResponse = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${env.WEATHERAPI_KEY}&q=${ip}&days=1`)
-			if (!weatherApiResponse.ok) throw new Error('Both weather APIs failed')
+			if (!weatherApiResponse.ok) throw new Error()
 
 			const data = await weatherApiResponse.json()
 			response = new Response(
@@ -84,7 +84,7 @@ export default async function handler(request) {
 			)
 		} catch (fallbackError) {
 			return new Response(
-				JSON.stringify({ error: 'Weather service unavailable' }),
+				JSON.stringify({ error: fallbackError }),
 				{
 					status: 503,
 					headers: {

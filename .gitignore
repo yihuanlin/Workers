@@ -2,3 +2,5 @@
 .vercel
 poem
 .env*.local
+.netlify
+public

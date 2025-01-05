@@ -10,7 +10,11 @@
   "name": "workers",
   "version": "1.0.0",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm run build:vercel",
+    "build:netlify": "mkdir -p .netlify/functions && cp -r api/* .netlify/functions/",
+    "build:vercel": "mkdir -p public && cp -r api/* public/",
+    "dev:netlify": "netlify dev",
+    "dev:vercel": "vercel dev"
   },
   "repository": {
     "type": "git",
