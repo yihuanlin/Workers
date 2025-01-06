@@ -15,8 +15,3 @@ cwd = "."
 type = "ESModule"
 globs = ["**/*.js"] # , "**/node_modules/**/*.js"]
 module = true
-
-[[kv_namespaces]]
-binding = "KV"
-id = "poem"
-preview_id = "poem"
