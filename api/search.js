@@ -1,50 +1,63 @@
 export const config = { runtime: 'edge' };
 
 const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET',
-    'Content-Type': 'application/json'
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET',
+  'Content-Type': 'application/json'
 };
 
-export default async function handler(req, res) {
-    const origin = req.headers.get('origin') || req.headers.get('Origin');
-    const method = req.method;
-    const isAllowed = !origin || origin === 'file://' || origin.endsWith('yhl.ac.cn');
+export default async function handler(request) {
+  const origin = request.headers.get('origin') || request.headers.get('Origin');
+  const method = request.method;
+  const isAllowed = !origin || origin === 'file://' || origin.endsWith('yhl.ac.cn');
 
-    if (!isAllowed) {
-        return new Response(JSON.stringify({ error: 'Access denied' }), {
-            status: 403,
-            headers: corsHeaders
-        });
-    }
-    if (method === 'OPTIONS') {
-        return new Response(null, { status: 200, headers: corsHeaders });
-    }
-
-    if (method === 'GET') {
-        const { searchParams } = new URL(req.url);
-        const searchValue = searchParams.get('q');
-
-        if (!searchValue) {
-            return new Response(JSON.stringify({ error: 'Missing fields' }), {
-                status: 400,
-                headers: corsHeaders
-            });
-        }
-        const data = await fetch(`https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(searchValue)}`)
-            .then(r => r.json())
-            .then(([, suggestions]) => {
-                return suggestions;
-            });
-
-        return new Response(JSON.stringify({
-            keys: data || ''
-        }), {
-            headers: corsHeaders
-        });
-    }
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-        status: 405,
-        headers: corsHeaders
+  if (!isAllowed) {
+    return new Response(JSON.stringify({ error: 'Access denied' }), {
+      status: 403,
+      headers: corsHeaders
     });
+  }
+  if (method === 'OPTIONS') {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+
+  if (method === 'GET') {
+    const { searchParams } = new URL(request.url);
+    const searchValue = searchParams.get('q');
+
+    if (!searchValue) {
+      return new Response(JSON.stringify({ error: 'Missing fields' }), {
+        status: 400,
+        headers: corsHeaders
+      });
+    }
+    const data = await fetch(
+      `https://suggestqueries.google.com/complete/search?client=firefox&q=${encodeURIComponent(searchValue)}`,
+      {
+        headers: {
+          'Accept-Charset': 'UTF-8',
+          'Accept': 'application/json; charset=utf-8',
+          'User-Agent': 'Mozilla/5.0'
+        }
+      }
+    )
+      .then(async r => {
+        const text = await r.text();
+        return JSON.parse(text);
+      })
+      .then(([, suggestions]) => suggestions);
+
+    return new Response(JSON.stringify({
+      keys: data || ''
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json; charset=utf-8'
+      }
+    });
+  }
+  return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    status: 405,
+    headers: corsHeaders
+  });
 }
