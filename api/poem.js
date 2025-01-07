@@ -1,5 +1,5 @@
 export const config = { runtime: 'edge' };
-import { createClient } from '@vercel/kv';
+import { Redis } from '@upstash/redis';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,11 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type'
 };
 
-export default async function handler(request, env = null) {
-  const kv = createClient({
-    url: process.env.KV_REST_API_URL,
-    token: process.env.KV_REST_API_TOKEN
-  });
+export default async function handler(request, env = {}) {
   const origin = request.headers.get('origin');
   const isAllowed = !origin || origin === 'file://' ||
     origin.endsWith('yhl.ac.cn');
@@ -47,6 +43,18 @@ export default async function handler(request, env = null) {
         putError: null,
         putErrorPosition: [],
       };
+      // 5351 + 150
+      // const kv = new Redis({
+      //   url: process.env.UPSTASH_REDIS_REST_URL,
+      //   token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      //   automaticDeserialization: false
+      // });
+      // 9910 + 100
+      // const kv = new Redis({
+      //   url: process.env.UPSTASH_REDIS_URL,
+      //   token: process.env.UPSTASH_REDIS_TOKEN,
+      //   automaticDeserialization: false
+      // });
       for (let j = 0; j < quotes.length && putCount < MAXPUTS; j += BATCHSIZE) {
         for (let i = 0; i < BATCHSIZE && putCount < MAXPUTS; i++) {
           try {
@@ -80,21 +88,71 @@ export default async function handler(request, env = null) {
   }
 
   if (method === 'GET') {
+    let sentence, kv;
     try {
-      let sentence;
-      for (let attempts = 0; attempts < 3; attempts++) {
-        const rand = Math.floor(Math.random() * process.env.POEM_LENGTH);
-        sentence = await kv.get(`sentence${rand}`);
-        if (sentence) {
-          const { _id, ...sentenceWithoutId } = sentence;
-          return new Response(JSON.stringify(sentenceWithoutId), { status: 200, headers: corsHeaders });
+      if (env.poem) {
+        for (let attempts = 0; attempts < 3; attempts++) {
+          const rand = Math.floor(Math.random() * process.env.POEM_LENGTH);
+          sentence = await env.poem.get(`sentence${rand}`, { cacheTtl: 31536000, type: 'json' });
+          if (sentence) {
+            return new Response(typeof sentence === 'string' ? sentence : JSON.stringify(sentence), { headers: corsHeaders });
+          }
+        }
+        return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
+      } else {
+        throw new Error();
+      }
+    } catch {
+      kv = new Redis({
+        url: process.env.UPSTASH_REDIS_URL,
+        token: process.env.UPSTASH_REDIS_TOKEN,
+        automaticDeserialization: false
+      });
+      try {
+        for (let attempts = 0; attempts < 3; attempts++) {
+          const rand = Math.floor(Math.random() * process.env.POEM_LENGTH);
+          sentence = await kv.get(`sentence${rand}`);
+          if (sentence) {
+            return new Response(sentence, { status: 200, headers: corsHeaders });
+          }
+        }
+        return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
+      } catch {
+        try {
+          kv = new Redis({
+            url: process.env.UPSTASH_REDIS_URL,
+            token: process.env.UPSTASH_REDIS_TOKEN,
+            automaticDeserialization: false
+          });
+          for (let attempts = 0; attempts < 3; attempts++) {
+            const rand = Math.floor(Math.random() * process.env.POEM_LENGTH);
+            sentence = await kv.get(`sentence${rand}`);
+            if (sentence) {
+              return new Response(sentence, { status: 200, headers: corsHeaders });
+            }
+          }
+          return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
+        } catch {
+          try {
+            // kv = new Redis({
+            //   url: process.env.KV_REST_API_URL,
+            //   token: process.env.KV_REST_API_TOKEN,
+            //   automaticDeserialization: false
+            // });
+            // for (let attempts = 0; attempts < 3; attempts++) {
+            //   const rand = Math.floor(Math.random() * process.env.POEM_LENGTH);
+            //   sentence = await kv.get(`sentence${rand}`);
+            //   if (sentence) {
+            //     return new Response(sentence, { status: 200, headers: corsHeaders });
+            //   }
+            // }
+            return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
+          } catch (e) {
+            return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
+          }
         }
       }
-      return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
-    } catch (e) {
-      return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
     }
   }
-
   return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers: corsHeaders });
 }

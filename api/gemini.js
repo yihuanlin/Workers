@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type'
 };
 
-export default async function handler(req, env = null) {
+export default async function handler(req, env = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
   const origin = req.headers.get('origin') || req.headers.get('Origin');
   const method = req.method;

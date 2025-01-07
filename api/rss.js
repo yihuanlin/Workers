@@ -46,7 +46,7 @@ const corsHeaders = {
   'Cache-Control': 'private, max-age=0, stale-while-revalidate=31536000'
 };
 
-export default async function handler(request, env = null) {
+export default async function handler(request, env = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
   const origin = request.headers['origin'] || request.headers['Origin'];
   const isAllowed = !origin || origin == 'file://' ||

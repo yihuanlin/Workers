@@ -1,7 +1,7 @@
 export const config = { runtime: 'edge' };
 import { geolocation } from '@vercel/functions';
 
-export default async function handler(request, env = null) {
+export default async function handler(request, env = {}, context = {}) {
   const origin = request.headers.get('Origin');
 
   const isAllowed = !origin || origin.endsWith('yhl.ac.cn') || origin === 'file://';
@@ -21,31 +21,43 @@ export default async function handler(request, env = null) {
   let response, latitude, longitude, city, cleanedCity;
   try {
     try {
-      ({ latitude, longitude, city } = await geolocation(request) || {})
-      cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
-      if (!latitude || !longitude || !cleanedCity) {
-        throw new Error()
-      }
-    } catch {
-      try {
+      if (process.env.VERCEL === '1') {
+        ({ latitude, longitude, city } = await geolocation(request) || {})
+        cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
+        if (!latitude || !longitude || !cleanedCity) {
+          throw new Error()
+        }
+      } else if (request.cf) {
         ({ latitude, longitude, city } = request.cf)
         cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
         if (!latitude || !longitude || !cleanedCity) {
           throw new Error()
         }
-      } catch {
-        const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-          || request.headers.get('x-real-ip')
-          || request.socket?.remoteAddress
-          || request.ip
-        const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${process.env.IPGEO_KEY}&ip=${ip}`)
-        if (!geoResponse.ok) {
+      } else if (context.geo) {
+        ({ latitude, longitude, city } = context.geo)
+        cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
+        if (!latitude || !longitude || !cleanedCity) {
           throw new Error()
         }
-        const geoData = await geoResponse.json()
-        latitude = geoData.latitude
-        longitude = geoData.longitude
-        cleanedCity = geoData.city.replace(/(District|Province|County|City)\b/g, '').trim()
+      } else {
+        throw new Error()
+      }
+    }
+    catch {
+      const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+        || request.headers.get('x-real-ip')
+        || request.socket?.remoteAddress
+        || request.ip
+      const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${process.env.IPGEO_KEY}&ip=${ip}`)
+      if (!geoResponse.ok) {
+        throw new Error()
+      }
+      const geoData = await geoResponse.json()
+      latitude = geoData.latitude
+      longitude = geoData.longitude
+      cleanedCity = geoData.city.replace(/(District|Province|County|City)\b/g, '').trim()
+      if (!latitude || !longitude || !cleanedCity) {
+        throw new Error()
       }
     }
     const weatherUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`
