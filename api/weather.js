@@ -1,43 +1,6 @@
 export const config = { runtime: 'edge' };
 import { geolocation } from '@vercel/functions';
 
-const getLocationData = async (request, env = null) => {
-  const isValidLocation = (lat, long, city) => lat && long && city;
-  try {
-    const { latitude, longitude, city } = await geolocation(request) || {};
-    const cleanedCity = city?.replace(/(District|Province|County|City)\b/g, '').trim();
-    if (isValidLocation(latitude, longitude, cleanedCity)) {
-      return { latitude, longitude, cleanedCity };
-    }
-  } catch {
-  }
-  try {
-    const { latitude, longitude, city } = request.cf;
-    const cleanedCity = city?.replace(/(District|Province|County|City)\b/g, '').trim();
-    if (isValidLocation(latitude, longitude, cleanedCity)) {
-      return { latitude, longitude, cleanedCity };
-    }
-  } catch {
-  }
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || request.headers.get('x-real-ip')
-    || request.socket?.remoteAddress
-    || request.ip;
-  const geoResponse = await fetch(
-    `https://api.ipgeolocation.io/ipgeo?apiKey=${process.env.IPGEO_KEY}&ip=${ip}`
-  );
-  if (!geoResponse.ok) {
-    throw new Error('Failed to get location from IP');
-  }
-  const geoData = await geoResponse.json();
-  const cleanedCity = geoData.city?.replace(/(District|Province|County|City)\b/g, '').trim();
-  return {
-    latitude: geoData.latitude,
-    longitude: geoData.longitude,
-    cleanedCity
-  };
-}
-
 export default async function handler(request, env = null) {
   const origin = request.headers.get('Origin');
 
@@ -55,8 +18,36 @@ export default async function handler(request, env = null) {
     );
   }
 
+  let response, latitude, longitude, city, cleanedCity;
   try {
-    const { latitude, longitude, cleanedCity } = await getLocationData(request, env);
+    try {
+      ({ latitude, longitude, city } = await geolocation(request) || {})
+      cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
+      if (!latitude || !longitude || !cleanedCity) {
+        throw new Error()
+      }
+    } catch {
+      try {
+        ({ latitude, longitude, city } = request.cf)
+        cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
+        if (!latitude || !longitude || !cleanedCity) {
+          throw new Error()
+        }
+      } catch {
+        const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+          || request.headers.get('x-real-ip')
+          || request.socket?.remoteAddress
+          || request.ip
+        const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${process.env.IPGEO_KEY}&ip=${ip}`)
+        if (!geoResponse.ok) {
+          throw new Error()
+        }
+        const geoData = await geoResponse.json()
+        latitude = geoData.latitude
+        longitude = geoData.longitude
+        cleanedCity = geoData.city.replace(/(District|Province|County|City)\b/g, '').trim()
+      }
+    }
     const weatherUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`
     const weatherResponse = await fetch(weatherUrl, {
       next: { revalidate: 86400 }
@@ -94,7 +85,7 @@ export default async function handler(request, env = null) {
         || request.socket?.remoteAddress
         || request.ip
       const weatherApiResponse = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${process.env.WEATHERAPI_KEY}&q=${ip}&days=1`)
-      if (!weatherApiResponse.ok) throw new Error(weatherApiResponse.statusText)
+      if (!weatherApiResponse.ok) throw new Error()
 
       const data = await weatherApiResponse.json()
       response = new Response(
@@ -119,10 +110,9 @@ export default async function handler(request, env = null) {
           }
         }
       )
-    } catch (e) {
-      console.warn(e)
+    } catch (fallbackError) {
       return new Response(
-        JSON.stringify({ error: e.message }),
+        JSON.stringify({ error: fallbackError }),
         {
           status: 503,
           headers: {

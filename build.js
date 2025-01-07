@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile, mkdir } from 'fs/promises';
+import { readdir, readFile, writeFile } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
@@ -109,7 +109,6 @@ export default {
   }
 };`;
 
-  await mkdir('./.wrangler/build', { recursive: true });
   await writeFile('./worker.js', workerCode);
 }
 

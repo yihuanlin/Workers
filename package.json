@@ -25,7 +25,8 @@
     "env:vercel": "vercel env pull .env.local",
     "env:netlify": "netlify env:import .env.local",
     "env:push-vercel": "cat .env.local | grep -v '^#' | while IFS='=' read -r key value; do if [[ $key =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then vercel env add \"$key\" production <<< \"$value\"; fi; done",
-    "env:push-netlify": "cat .env.local | while IFS= read -r line; do netlify env:set \"${line%%=*}\" \"${line#*=}\"; done"
+    "env:push-netlify": "cat .env.local | while IFS= read -r line; do netlify env:set \"${line%%=*}\" \"${line#*=}\"; done",
+    "env:push-cf": "cat .env.local | grep -v '^#' | while IFS='=' read -r key value; do wrangler secret put \"$key\" <<< \"${value//\\\"/}\"; done"
   },
   "repository": {
     "type": "git",
