@@ -2,19 +2,16 @@
   command = "npm run build:netlify"
   publish = "/"
   edge_functions = "netlify/edge-functions"
-  functions = "netlify/functions"
-
-[functions]
-  external_node_modules = ["@vercel/functions", "@upstash/redis"]
-  node_bundler = "esbuild"
 
 [build.environment]
   NETLIFY = "true"
   NODE_VERSION = "22"
+  NEXT_USE_NETLIFY_EDGE = "true"
 
 [[edge_functions]]
   function = "index"
   path = "/"
+  cache = "manual"
 
 [[edge_functions]]
   function = "search"
@@ -23,6 +20,7 @@
 [[edge_functions]]
   function = "poem"
   path = "/poem"
+  cache = "manual"
 
 [[edge_functions]]
   function = "gemini"
@@ -31,10 +29,16 @@
 [[edge_functions]]
   function = "weather"
   path = "/weather"
+  cache = "manual"
 
 [[edge_functions]]
   function = "cors"
   path = "/cors"
+
+[[edge_functions]]
+  function = "rss"
+  path = "/rss"
+  cache = "manual"
 
 [[headers]]
   for = "/*"

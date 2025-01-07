@@ -1,5 +1,13 @@
 export const config = { runtime: 'edge' };
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET',
+  'Content-Type': 'application/json',
+  'Cache-Control': 'public, max-age=300, stale-while-revalidate=86400',
+  'Vary': 'Accept-Encoding, Query'
+};
+
 export default async function handler(request, env = {}) {
   const origin = request.headers.get('Origin');
 
@@ -83,14 +91,7 @@ export default async function handler(request, env = {}) {
         sunset: new Date(weatherData.current.sunset * 1000).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }),
         maxTemperature: Math.round(weatherData.daily[0].temp.max),
         minTemperature: Math.round(weatherData.daily[0].temp.min)
-      }),
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Cache-Control': 'public, max-age=300, stale-while-revalidate=86400',
-          'Access-Control-Allow-Origin': '*'
-        }
-      }
+      }), { headers: corsHeaders }
     )
   } catch {
     try {
@@ -116,14 +117,7 @@ export default async function handler(request, env = {}) {
           sunset: data.forecast.forecastday[0].astro.sunset,
           maxTemperature: Math.round(data.forecast.forecastday[0].day.maxtemp_c),
           minTemperature: Math.round(data.forecast.forecastday[0].day.mintemp_c)
-        }),
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Cache-Control': 'public, max-age=300, stale-while-revalidate=86400',
-            'Access-Control-Allow-Origin': '*'
-          }
-        }
+        }), { headers: corsHeaders }
       )
     } catch (fallbackError) {
       return new Response(

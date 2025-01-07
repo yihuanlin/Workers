@@ -1,5 +1,14 @@
 export const config = { runtime: 'edge' };
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, HEAD, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': '*',
+  'Access-Control-Expose-Headers': '*',
+  'Cache-Control': 'private, max-age=0, stale-while-revalidate=31536000',
+  'Vary': 'Accept-Encoding, Query'
+};
+
 export default async function handler(request) {
   const origin = request.headers.get('Origin');
 
@@ -24,14 +33,6 @@ export default async function handler(request) {
   if (!corsUrl) {
     return new Response('Missing URL parameter', { status: 400 });
   }
-
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, HEAD, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': '*',
-    'Access-Control-Expose-Headers': '*',
-    'Cache-Control': 'private, max-age=0, stale-while-revalidate=31536000'
-  };
 
   if (request.method === 'OPTIONS') {
     return new Response(null, {

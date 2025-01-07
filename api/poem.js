@@ -4,7 +4,9 @@ import { Redis } from '@upstash/redis';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, GET',
-  'Access-Control-Allow-Headers': 'Content-Type'
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Cache-Control': 'no-cache, must-revalidate',
+  'Vary': 'Accept-Encoding'
 };
 
 export default async function handler(request, env = {}) {
@@ -30,7 +32,7 @@ export default async function handler(request, env = {}) {
   if (method === 'POST') {
     try {
       const body = await request.json();
-      const { URL, PASSWORD, BATCHSIZE = 40, MAXPUTS = 200, STARTKEY = 0 } = body || {};
+      const { URL, PASSWORD, BATCHSIZE = 40, MAXPUTS = 200, STARTKEY = 0, DATABASE = 0 } = body || {};
       if (!URL || !PASSWORD) return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400, headers: corsHeaders });
       if (PASSWORD !== process.env.REQUIRED_PASSWORD) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
 
@@ -43,18 +45,26 @@ export default async function handler(request, env = {}) {
         putError: null,
         putErrorPosition: [],
       };
-      // 5351 + 150
-      // const kv = new Redis({
-      //   url: process.env.UPSTASH_REDIS_REST_URL,
-      //   token: process.env.UPSTASH_REDIS_REST_TOKEN,
-      //   automaticDeserialization: false
-      // });
-      // 9910 + 100
-      // const kv = new Redis({
-      //   url: process.env.UPSTASH_REDIS_URL,
-      //   token: process.env.UPSTASH_REDIS_TOKEN,
-      //   automaticDeserialization: false
-      // });
+      let kv;
+      if (DATABASE === 0) {
+        kv = new Redis({
+          url: process.env.UPSTASH_REDIS_URL,
+          token: process.env.UPSTASH_REDIS_TOKEN,
+          automaticDeserialization: false
+        });
+      } else if (DATABASE === 1) {
+        kv = new Redis({
+          url: process.env.UPSTASH_REDIS_REST_URL,
+          token: process.env.UPSTASH_REDIS_REST_TOKEN,
+          automaticDeserialization: false
+        });
+      } else if (DATABASE === 2) {
+        kv = new Redis({
+          url: process.env.KV_REST_API_URL,
+          token: process.env.KV_REST_API_TOKEN,
+          automaticDeserialization: false
+        });
+      }
       for (let j = 0; j < quotes.length && putCount < MAXPUTS; j += BATCHSIZE) {
         for (let i = 0; i < BATCHSIZE && putCount < MAXPUTS; i++) {
           try {
@@ -79,8 +89,7 @@ export default async function handler(request, env = {}) {
 
       const status = Object.values(log).every(value => value === null || (Array.isArray(value) && value.length === 0)) ? 200 : 500;
       return new Response(
-        JSON.stringify({ totalLength: newLength, added: putCount, log }),
-        { status, headers: this.corsHeaders }
+        JSON.stringify({ totalLength: newLength, added: putCount, log }), { status, headers: corsHeaders }
       );
     } catch (e) {
       return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
@@ -132,18 +141,18 @@ export default async function handler(request, env = {}) {
           throw new Error();
         } catch {
           try {
-            // kv = new Redis({
-            //   url: process.env.KV_REST_API_URL,
-            //   token: process.env.KV_REST_API_TOKEN,
-            //   automaticDeserialization: false
-            // });
-            // for (let attempts = 0; attempts < 3; attempts++) {
-            //   const rand = Math.floor(Math.random() * process.env.POEM_LENGTH);
-            //   sentence = await kv.get(`sentence${rand}`);
-            //   if (sentence) {
-            //     return new Response(sentence, { status: 200, headers: corsHeaders });
-            //   }
-            // }
+            kv = new Redis({
+              url: process.env.KV_REST_API_URL,
+              token: process.env.KV_REST_API_TOKEN,
+              automaticDeserialization: false
+            });
+            for (let attempts = 0; attempts < 3; attempts++) {
+              const rand = Math.floor(Math.random() * process.env.POEM_LENGTH);
+              sentence = await kv.get(`sentence${rand}`);
+              if (sentence) {
+                return new Response(sentence, { status: 200, headers: corsHeaders });
+              }
+            }
             throw new Error('Failed to get sentence');
           } catch (e) {
             return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });

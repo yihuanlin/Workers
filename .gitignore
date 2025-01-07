@@ -5,6 +5,3 @@ public
 worker.js
 wrangler.toml
 netlify
-
-# Local Netlify folder
-.netlify

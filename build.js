@@ -80,7 +80,9 @@ ${Array.from(imports).join('\n')}
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, GET',
-  'Access-Control-Allow-Headers': 'Content-Type'
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Cache-Control': 'no-cache, must-revalidate',
+  'Vary': 'Accept-Encoding, Query'
 };
 
 ${Array.from(declarations.values()).join('\n\n')}

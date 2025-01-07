@@ -1,7 +1,4 @@
-export const config = {
-  runtime: 'edge',
-  path: '/rss'
-};
+export const config = { runtime: 'edge' };
 
 import { XMLParser } from 'fast-xml-parser';
 
@@ -44,10 +41,9 @@ const getRandomFeed = () => {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, HEAD, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': '*',
-  'Access-Control-Expose-Headers': '*',
-  'Cache-Control': 'private, max-age=0, stale-while-revalidate=31536000'
+  'Access-Control-Allow-Methods': 'GET',
+  'Cache-Control': 'no-cache, must-revalidate',
+  'Vary': 'Accept-Encoding, Query'
 };
 
 export default async function handler(request, env = {}) {
@@ -70,12 +66,6 @@ export default async function handler(request, env = {}) {
   const { searchParams } = new URL(request.url);
   const summary = searchParams.get('s');
 
-  if (request.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders,
-    })
-  }
   let url = getRandomFeed();
   let attempts = 0;
   let text;

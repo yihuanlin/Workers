@@ -3,7 +3,9 @@ export const config = { runtime: 'edge' };
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, GET',
-  'Access-Control-Allow-Headers': 'Content-Type'
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Cache-Control': 'no-cache, must-revalidate',
+  'Vary': 'Accept-Encoding, Query'
 };
 
 export default async function handler(req, env = {}) {
