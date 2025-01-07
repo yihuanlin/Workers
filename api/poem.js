@@ -1,5 +1,5 @@
 export const config = { runtime: 'edge' };
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,11 +7,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type'
 };
 
-export default async function handler(req) {
-  const origin = req.headers.get('origin');
+export default async function handler(request, env = null) {
+  const kv = createClient({
+    url: process.env.KV_REST_API_URL,
+    token: process.env.KV_REST_API_TOKEN
+  });
+  const origin = request.headers.get('origin');
   const isAllowed = !origin || origin === 'file://' ||
     origin.endsWith('yhl.ac.cn');
-  const method = req.method;
+  const method = request.method;
 
   if (!isAllowed) {
     return new Response(JSON.stringify({ error: 'Access denied' }), {
@@ -29,7 +33,7 @@ export default async function handler(req) {
 
   if (method === 'POST') {
     try {
-      const body = await req.json();
+      const body = await request.json();
       const { URL, PASSWORD, BATCHSIZE = 40, MAXPUTS = 200, STARTKEY = 0 } = body || {};
       if (!URL || !PASSWORD) return new Response(JSON.stringify({ error: 'Missing fields' }), { status: 400, headers: corsHeaders });
       if (PASSWORD !== process.env.REQUIRED_PASSWORD) return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });

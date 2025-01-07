@@ -12,6 +12,7 @@ async function buildWorker() {
   let declarations = new Map();
   let handlers = [];
   const handlerNames = [];
+  const skipPatterns = ['corsHeaders'];
 
   for (const file of files) {
     if (file.endsWith('.js') && file !== 'wallpaper.js') {
@@ -26,6 +27,8 @@ async function buildWorker() {
         const rawLine = lines[i];
         const trimmed = rawLine.trim();
         if (!trimmed) continue;
+
+        if (skipPatterns.some(p => rawLine.includes(p))) continue;
 
         if (trimmed.startsWith('import ')) {
           imports.add(trimmed);
@@ -65,7 +68,7 @@ async function buildWorker() {
         .replace('export default async function handler', `export async function ${path}`)
         .replace('export default function handler', `export async function ${path}`)
         .replace('export default', `export async function ${path}`)
-        .replace('process.env.', 'env.');
+        .replace(/process\.env\./g, 'env.');
 
       handlers.push(handlerFunction);
     }
@@ -73,6 +76,12 @@ async function buildWorker() {
 
   const workerCode = `
 ${Array.from(imports).join('\n')}
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, GET',
+  'Access-Control-Allow-Headers': 'Content-Type'
+};
 
 ${Array.from(declarations.values()).join('\n\n')}
 
