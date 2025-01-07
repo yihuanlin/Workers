@@ -1,6 +1,6 @@
 [build]
   command = "npm run build:netlify"
-  publish = "public"
+  publish = "/"
   functions = ".netlify/functions"
 
 [functions]
