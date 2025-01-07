@@ -45,9 +45,9 @@ export default async function handler(request, env = {}) {
       }
     }
     catch {
-      const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      const ip = request.headers.get('x-nf-client-connection-ip')
+        || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || request.headers.get('x-real-ip')
-        || request.headers.get('x-nf-client-connection-ip')
         || request.socket?.remoteAddress
         || request.ip
       const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${process.env.IPGEO_KEY}&ip=${ip}`)
@@ -94,9 +94,9 @@ export default async function handler(request, env = {}) {
     )
   } catch {
     try {
-      const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      const ip = request.headers.get('x-nf-client-connection-ip')
+        || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || request.headers.get('x-real-ip')
-        || request.headers.get('x-nf-client-connection-ip')
         || request.socket?.remoteAddress
         || request.ip
       const weatherApiResponse = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${process.env.WEATHERAPI_KEY}&q=${ip}&days=1`)
