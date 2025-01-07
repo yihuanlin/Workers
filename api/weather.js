@@ -1,5 +1,4 @@
 export const config = { runtime: 'edge' };
-import { geolocation } from '@vercel/functions';
 
 export default async function handler(request, env = {}) {
   const origin = request.headers.get('Origin');
@@ -22,7 +21,9 @@ export default async function handler(request, env = {}) {
   try {
     try {
       if (process.env.VERCEL === '1') {
-        ({ latitude, longitude, city } = await geolocation(request) || {})
+        city = request.headers.get('x-vercel-ip-city')
+        latitude = request.headers.get('x-vercel-ip-latitude')
+        longitude = request.headers.get('x-vercel-ip-longitude')
         cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
         if (!latitude || !longitude || !cleanedCity) {
           throw new Error()
@@ -33,8 +34,8 @@ export default async function handler(request, env = {}) {
         if (!latitude || !longitude || !cleanedCity) {
           throw new Error()
         }
-      } else if (env.geo) {
-        ({ latitude, longitude, city } = env.geo)
+      } else if (request.headers.get('x-nf-geo') || env.geo) {
+        ({ latitude, longitude, city } = JSON.parse(request.headers.get('x-nf-geo')) ? JSON.parse(request.headers.get('x-nf-geo')) : env.geo)
         cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
         if (!latitude || !longitude || !cleanedCity) {
           throw new Error()
@@ -46,6 +47,7 @@ export default async function handler(request, env = {}) {
     catch {
       const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || request.headers.get('x-real-ip')
+        || request.headers.get('x-nf-client-connection-ip')
         || request.socket?.remoteAddress
         || request.ip
       const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${process.env.IPGEO_KEY}&ip=${ip}`)
@@ -94,6 +96,7 @@ export default async function handler(request, env = {}) {
     try {
       const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || request.headers.get('x-real-ip')
+        || request.headers.get('x-nf-client-connection-ip')
         || request.socket?.remoteAddress
         || request.ip
       const weatherApiResponse = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${process.env.WEATHERAPI_KEY}&q=${ip}&days=1`)

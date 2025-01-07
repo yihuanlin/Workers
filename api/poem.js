@@ -98,10 +98,8 @@ export default async function handler(request, env = {}) {
             return new Response(typeof sentence === 'string' ? sentence : JSON.stringify(sentence), { headers: corsHeaders });
           }
         }
-        return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
-      } else {
-        throw new Error();
       }
+      throw new Error();
     } catch {
       kv = new Redis({
         url: process.env.UPSTASH_REDIS_URL,
@@ -116,7 +114,7 @@ export default async function handler(request, env = {}) {
             return new Response(sentence, { status: 200, headers: corsHeaders });
           }
         }
-        return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
+        throw new Error();
       } catch {
         try {
           kv = new Redis({
@@ -131,7 +129,7 @@ export default async function handler(request, env = {}) {
               return new Response(sentence, { status: 200, headers: corsHeaders });
             }
           }
-          return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
+          throw new Error();
         } catch {
           try {
             // kv = new Redis({
@@ -146,7 +144,7 @@ export default async function handler(request, env = {}) {
             //     return new Response(sentence, { status: 200, headers: corsHeaders });
             //   }
             // }
-            return new Response(JSON.stringify({ error: 'Failed to get valid sentence' }), { status: 500, headers: corsHeaders });
+            throw new Error('Failed to get sentence');
           } catch (e) {
             return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: corsHeaders });
           }

@@ -1,4 +1,8 @@
-export const config = { runtime: 'edge' };
+export const config = {
+  runtime: 'edge',
+  path: '/rss'
+};
+
 import { XMLParser } from 'fast-xml-parser';
 
 const feedGroups = {

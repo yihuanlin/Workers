@@ -15,7 +15,7 @@
   "version": "1.0.0",
   "scripts": {
     "build": "npm run build:vercel",
-    "build:netlify": "mkdir -p .netlify/functions && cp -r api/* .netlify/functions/ && rm .netlify/functions/wallpaper.js",
+    "build:netlify": "rm -rf netlify && mkdir -p netlify/edge-functions netlify/functions && cd api && find . -type f ! -name 'wallpaper.js' ! -name 'rss.js' -exec cp {} ../netlify/edge-functions/ \\; && cp rss.js ../netlify/functions/",
     "build:vercel": "mkdir -p public && cp -r api/* public/",
     "build:cf": "node build.js",
     "dev:netlify": "netlify dev",

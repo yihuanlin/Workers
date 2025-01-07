@@ -1,7 +1,8 @@
 [build]
   command = "npm run build:netlify"
   publish = "/"
-  functions = ".netlify/functions"
+  edge_functions = "netlify/edge-functions"
+  functions = "netlify/functions"
 
 [functions]
   external_node_modules = ["@vercel/functions", "@upstash/redis"]
@@ -11,10 +12,29 @@
   NETLIFY = "true"
   NODE_VERSION = "22"
 
-[[redirects]]
-  from = "/*"
-  to = ".netlify/functions/:splat"
-  status = 200
+[[edge_functions]]
+  function = "index"
+  path = "/"
+
+[[edge_functions]]
+  function = "search"
+  path = "/search"
+
+[[edge_functions]]
+  function = "poem"
+  path = "/poem"
+
+[[edge_functions]]
+  function = "gemini"
+  path = "/gemini"
+
+[[edge_functions]]
+  function = "weather"
+  path = "/weather"
+
+[[edge_functions]]
+  function = "cors"
+  path = "/cors"
 
 [[headers]]
   for = "/*"
