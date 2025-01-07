@@ -1,6 +1,5 @@
 export const config = { runtime: 'edge' };
 import { XMLParser } from 'fast-xml-parser';
-const apiKey = process.env.GEMINI_API_KEY;
 
 const feedGroups = {
   development: 'https://journals.biologists.com/rss/site_1000005/1000005.xml',
@@ -47,7 +46,8 @@ const corsHeaders = {
   'Cache-Control': 'private, max-age=0, stale-while-revalidate=31536000'
 };
 
-export default async function handler(request) {
+export default async function handler(request, env = null) {
+  const apiKey = process.env.GEMINI_API_KEY;
   const origin = request.headers['origin'] || request.headers['Origin'];
   const isAllowed = !origin || origin == 'file://' ||
     origin.endsWith('yhl.ac.cn');
@@ -57,7 +57,7 @@ export default async function handler(request) {
       {
         status: 403,
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json; charset=utf-8'
         }
       }
     );
@@ -87,7 +87,6 @@ export default async function handler(request) {
 
     try {
       response = await fetch(feedRequest, {
-        cache: 'force-cache',
         next: { revalidate: 86400 }
       });
       text = await response.text();
@@ -114,7 +113,7 @@ export default async function handler(request) {
         throw new Error('No items found');
       }
     } catch (e) {
-      console.warn(url);
+      console.warn(url, e);
       // Continue to next attempt
     }
 
@@ -136,19 +135,25 @@ export default async function handler(request) {
   let title = randomItem.title
     .replace(/<i>(.*?)<\/i>/g, '<em>$1</em>')
     .replace(/&nbsp;/g, ' ')
-    .replace(/[\u00A0-\u9999<>\&]/g, (i) => '&#' + i.charCodeAt(0) + ';')
     .replace(/&#[0-9]+;/g, (x) => String.fromCharCode(parseInt(x.match(/[0-9]+/)[0])))
+    .replace(/&([a-z]{2,8});/gi, (match) => match)
     .normalize('NFKC')
     .trim();
   title = (/[.!?]$/.test(title) ? title : title + '.');
 
 
-  let description = decodeURIComponent(randomItem.description)
+  let description = randomItem.description;
+  try {
+    description = decodeURIComponent(description);
+  } catch (e) {
+    console.warn(url, description, e);
+  }
+  description = description
     .replace('ABSTRACT', '')
     .replace(/<i>(.*?)<\/i>/g, '<em>$1</em>')
     .replace(/&nbsp;/g, ' ')
-    .replace(/[\u00A0-\u9999<>\&]/g, (i) => '&#' + i.charCodeAt(0) + ';')
     .replace(/&#[0-9]+;/g, (x) => String.fromCharCode(parseInt(x.match(/[0-9]+/)[0])))
+    .replace(/&([a-z]{2,8});/gi, (match) => match)
     .normalize('NFKC')
     .trim();
 
@@ -190,7 +195,7 @@ export default async function handler(request) {
   return new Response(stream, {
     headers: {
       ...corsHeaders,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json; charset=utf-8',
       'Transfer-Encoding': 'chunked'
     }
   });

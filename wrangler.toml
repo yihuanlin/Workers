@@ -1,17 +1,17 @@
-name = "workers"
+name = "worker"
 main = "worker.js"
 compatibility_date = "2025-01-05"
 compatibility_flags = ["nodejs_compat"]
-no_bundle = true
-find_additional_modules = true
+no_bundle = false
+# find_additional_modules = true
 base_dir = "."
 
 [build]
-# command = "npm install"
+command = "node build.js && npm install"
 cwd = "."
 # watch_dir = ["api", "worker.js", "package.json"]
 
-[[rules]]
-type = "ESModule"
-globs = ["**/*.js"] # , "**/node_modules/**/*.js"]
-module = true
+# [[rules]]
+# type = "ESModule"
+# globs = ["**/*.js", "**/node_modules/**/*.js"]
+# module = true
