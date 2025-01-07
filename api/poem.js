@@ -127,8 +127,8 @@ export default async function handler(request, env = {}) {
       } catch {
         try {
           kv = new Redis({
-            url: process.env.UPSTASH_REDIS_URL,
-            token: process.env.UPSTASH_REDIS_TOKEN,
+            url: process.env.UPSTASH_REDIS_REST_URL,
+            token: process.env.UPSTASH_REDIS_REST_TOKEN,
             automaticDeserialization: false
           });
           for (let attempts = 0; attempts < 3; attempts++) {
