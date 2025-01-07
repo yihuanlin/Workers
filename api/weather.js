@@ -1,7 +1,7 @@
 export const config = { runtime: 'edge' };
 import { geolocation } from '@vercel/functions';
 
-export default async function handler(request, env = {}, context = {}) {
+export default async function handler(request, env = {}) {
   const origin = request.headers.get('Origin');
 
   const isAllowed = !origin || origin.endsWith('yhl.ac.cn') || origin === 'file://';
@@ -33,8 +33,8 @@ export default async function handler(request, env = {}, context = {}) {
         if (!latitude || !longitude || !cleanedCity) {
           throw new Error()
         }
-      } else if (context.geo) {
-        ({ latitude, longitude, city } = context.geo)
+      } else if (env.geo) {
+        ({ latitude, longitude, city } = env.geo)
         cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
         if (!latitude || !longitude || !cleanedCity) {
           throw new Error()

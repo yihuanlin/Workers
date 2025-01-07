@@ -4,7 +4,7 @@
   functions = ".netlify/functions"
 
 [functions]
-  external_node_modules = ["@vercel/edge-config", "@vercel/functions", "@vercel/kv"]
+  external_node_modules = ["@vercel/functions", "@upstash/redis"]
   node_bundler = "esbuild"
 
 [build.environment]

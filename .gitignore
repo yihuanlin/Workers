@@ -4,3 +4,5 @@ others
 public
 worker.js
 wrangler.toml
+# Local Netlify folder
+.netlify
