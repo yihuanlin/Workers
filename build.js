@@ -103,7 +103,7 @@ export default {
   async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
-      const path = url.pathname.slice(1);
+      const path = url.pathname.slice(1).replace(/\\/$/, '');
       
       if (this[path]) {
         return await this[path](request, env, ctx);
