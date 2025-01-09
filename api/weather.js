@@ -32,7 +32,7 @@ export default async function handler(request, env = {}) {
     });
   }
 
-  if (request.methodm === 'GET') {
+  if (request.method === 'GET') {
     let response, latitude, longitude, city, cleanedCity, ip;
     try {
       try {
