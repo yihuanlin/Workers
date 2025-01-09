@@ -16,7 +16,7 @@
   "scripts": {
     "build": "npm run build:vercel",
     "build:netlify": "rm -rf netlify && mkdir -p netlify/edge-functions && cd api && find . -type f ! -name 'wallpaper.js' -exec sh -c 'if [ \"$(basename {})\" = \"rss.js\" ]; then sed \"s/fast-xml-parser/https:\\/\\/esm.sh\\/v135\\/fast-xml-parser/g\" {} > ../netlify/edge-functions/$(basename {}); else cp {} ../netlify/edge-functions/; fi' \\;",
-    "build:vercel": "mkdir -p public && cp -r api/* public/",
+    "build:vercel": "rm -rf public && mkdir -p public && cp -r api/* public/",
     "build:cf": "node build.js",
     "dev:netlify": "netlify dev",
     "dev:vercel": "vercel dev",
@@ -24,7 +24,7 @@
     "start": "node server.js",
     "env-get:vercel": "vercel env pull .env.local",
     "env-get:netlify": "netlify env:import .env.local",
-    "env:vercel": "cat .env.local | grep -v '^#' | while IFS='=' read -r key value; do if [[ $key =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then vercel env add \"$key\" production <<< \"$value\"; fi; done",
+    "env:vercel": "cat .env.local | grep -v '^#' | while IFS='=' read -r key value; do if [[ $key =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then echo -n \"$value\" | vercel env add \"$key\" production; fi; done",
     "env:netlify": "cat .env.local | grep -v '^#' | while IFS= read -r line; do if [ -n \"$line\" ]; then netlify env:set \"${line%%=*}\" \"${line#*=}\"; fi; done",
     "env:cf": "cat .env.local | grep -v '^#' | while IFS='=' read -r key value; do wrangler secret put \"$key\" <<< \"${value//\\\"/}\"; done"
   },

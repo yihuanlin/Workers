@@ -232,6 +232,7 @@ export default async (req, res) => {
   const date = new Date().toISOString().split('T')[0];
   if (req.method === 'GET') {
     res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
     try {
       if (req.query.type === 'image') {
         const response = await fetch(`https://${BLOB_ID}.public.blob.vercel-storage.com/wallpaper.webp`);

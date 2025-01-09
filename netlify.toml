@@ -9,11 +9,6 @@
   NEXT_USE_NETLIFY_EDGE = "true"
 
 [[edge_functions]]
-  function = "index"
-  path = "/"
-  cache = "manual"
-
-[[edge_functions]]
   function = "search"
   path = "/search"
 
@@ -39,6 +34,10 @@
   function = "rss"
   path = "/rss"
   cache = "manual"
+
+[[redirects]]
+  from = "/*"
+  to = "netlify/edge-functions/index.html"
 
 [[headers]]
   for = "/*"

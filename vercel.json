@@ -8,8 +8,19 @@
   },
   "rewrites": [
     {
+      "source": "/:path*",
+      "destination": "/api/:path*"
+    }
+  ],
+  "headers": [
+    {
       "source": "/(.*)",
-      "destination": "/api/$1"
+      "headers": [
+        {
+          "key": "x-vercel-enable-rewrite-caching",
+          "value": "1"
+        }
+      ]
     }
   ]
 }

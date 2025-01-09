@@ -1,6 +1,6 @@
 name = "worker"
 main = "worker.js"
-compatibility_date = "2025-01-05"
+compatibility_date = "2024-12-18"
 compatibility_flags = ["nodejs_compat"]
 no_bundle = false
 # find_additional_modules = true

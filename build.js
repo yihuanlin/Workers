@@ -89,19 +89,27 @@ ${Array.from(declarations.values()).join('\n\n')}
 
 ${handlers.join('\n\n')}
 
+export async function index(request) {
+  const url = new URL(request.url);
+  const searchParams = url.searchParams.toString();
+  const redirectParams = searchParams ? \`?\${searchParams}\` : '';
+  return Response.redirect(\`https://yhl.ac.cn\${redirectParams}\`, 301);
+};
+
 export default {
   ${handlerNames.join(',\n  ')},
+  index,
   
   async fetch(request, env, ctx) {
     try {
       const url = new URL(request.url);
-      const path = url.pathname.slice(1) || 'index';
+      const path = url.pathname.slice(1);
       
       if (this[path]) {
         return await this[path](request, env, ctx);
       }
       
-      return new Response('Not found', { status: 404 });
+      return await this['index'](request, env, ctx);
     } catch (error) {
       return new Response(JSON.stringify({ error: error.message }), {
         status: 500,

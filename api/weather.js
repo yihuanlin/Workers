@@ -4,7 +4,8 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET',
   'Content-Type': 'application/json',
-  'Cache-Control': 'public, max-age=300, stale-while-revalidate=86400',
+  'Cache-Control': 'private, max-age=300, stale-while-revalidate=86400',
+  'CDN-Cache-Control': 'no-store',
   'Vary': 'Accept-Encoding, Query'
 };
 

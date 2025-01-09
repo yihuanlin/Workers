@@ -42,7 +42,7 @@ const getRandomFeed = () => {
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET',
-  'Cache-Control': 'no-cache, must-revalidate',
+  'Cache-Control': 'public, no-cache, must-revalidate',
   'Vary': 'Accept-Encoding, Query'
 };
 
@@ -118,7 +118,6 @@ export default async function handler(request, env = {}) {
       return new Response(JSON.stringify({ error: 'Failed to fetch feed after 3 attempts' }), {
         status: 502,
         headers: {
-          ...corsHeaders,
           'Content-Type': 'application/json'
         }
       });
