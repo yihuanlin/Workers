@@ -138,8 +138,7 @@ export default async function handler(request, env = {}) {
   let description = randomItem.description;
   try {
     description = decodeURIComponent(description);
-  } catch (e) {
-    console.warn(url, description, e);
+  } catch {
   }
   description = description
     .replace('ABSTRACT', '')

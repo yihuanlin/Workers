@@ -26,7 +26,7 @@ export default async function handler(request, env = {}) {
     );
   }
 
-  let response, latitude, longitude, city, cleanedCity;
+  let response, latitude, longitude, city, cleanedCity, ip;
   try {
     try {
       if (process.env.VERCEL === '1') {
@@ -35,6 +35,7 @@ export default async function handler(request, env = {}) {
         longitude = request.headers.get('x-vercel-ip-longitude')
         cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
         if (!latitude || !longitude || !cleanedCity) {
+          console.warn('Vercel: no geo data found')
           throw new Error()
         }
       } else if (request.cf) {
@@ -47,6 +48,7 @@ export default async function handler(request, env = {}) {
         ({ latitude, longitude, city } = JSON.parse(request.headers.get('x-nf-geo')) ? JSON.parse(request.headers.get('x-nf-geo')) : env.geo)
         cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
         if (!latitude || !longitude || !cleanedCity) {
+          console.warn('Netlify: no geo data found')
           throw new Error()
         }
       } else {
@@ -54,13 +56,14 @@ export default async function handler(request, env = {}) {
       }
     }
     catch {
-      const ip = request.headers.get('x-real-ip')
+      ip = request.headers.get('x-real-ip')
         || request.headers.get('x-nf-client-connection-ip')
         || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || request.socket?.remoteAddress
         || request.ip
       const geoResponse = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=${process.env.IPGEO_KEY}&ip=${ip}`)
       if (!geoResponse.ok) {
+        console.warn(await geoResponse.text())
         throw new Error()
       }
       const geoData = await geoResponse.json()
@@ -68,12 +71,14 @@ export default async function handler(request, env = {}) {
       longitude = geoData.longitude
       cleanedCity = geoData.city.replace(/(District|Province|County|City)\b/g, '').trim()
       if (!latitude || !longitude || !cleanedCity) {
+        console.warn('IPGeolocation: no geo data found')
         throw new Error()
       }
     }
     const weatherUrl = `https://api.openweathermap.org/data/3.0/onecall?lat=${latitude}&lon=${longitude}&units=metric&appid=${process.env.OPENWEATHER_API_KEY}`
     const weatherResponse = await fetch(weatherUrl)
     if (!weatherResponse.ok) {
+      console.warn(await weatherResponse.text())
       throw new Error()
     }
     const weatherData = await weatherResponse.json()
@@ -94,14 +99,16 @@ export default async function handler(request, env = {}) {
     )
   } catch {
     try {
-      const ip = request.headers.get('x-real-ip')
+      ip = request.headers.get('x-real-ip')
         || request.headers.get('x-nf-client-connection-ip')
         || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || request.socket?.remoteAddress
         || request.ip
       const weatherApiResponse = await fetch(`https://api.weatherapi.com/v1/forecast.json?key=${process.env.WEATHERAPI_KEY}&q=${ip}&days=1`)
-      if (!weatherApiResponse.ok) throw new Error()
-
+      if (!weatherApiResponse.ok) {
+        console.warn(await weatherApiResponse.text())
+        throw new Error()
+      }
       const data = await weatherApiResponse.json()
       response = new Response(
         JSON.stringify({
