@@ -36,7 +36,16 @@ export default async function handler(request, env = {}) {
     let response, latitude, longitude, city, cleanedCity, ip;
     try {
       try {
-        if (process.env.VERCEL === '1') {
+        if (request.headers.get('fastly-client-geo-city')) {
+          city = request.headers.get('fastly-client-geo-city')
+          latitude = request.headers.get('fastly-client-geo-latitude')
+          longitude = request.headers.get('fastly-client-geo-longitude')
+          cleanedCity = city.replace(/(District|Province|County|City)\b/g, '').trim()
+          if (!latitude || !longitude || !cleanedCity) {
+            console.warn('Fastly: no geo data found')
+            throw new Error()
+          }
+        } else if (process.env.VERCEL === '1') {
           city = request.headers.get('x-vercel-ip-city')
           latitude = request.headers.get('x-vercel-ip-latitude')
           longitude = request.headers.get('x-vercel-ip-longitude')
@@ -63,7 +72,8 @@ export default async function handler(request, env = {}) {
         }
       }
       catch {
-        ip = request.headers.get('x-real-ip')
+        ip = request.headers.get('fastly-client-ip')
+          || request.headers.get('x-real-ip')
           || request.headers.get('x-nf-client-connection-ip')
           || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
           || request.socket?.remoteAddress
@@ -106,7 +116,8 @@ export default async function handler(request, env = {}) {
       )
     } catch {
       try {
-        ip = request.headers.get('x-real-ip')
+        ip = request.headers.get('fastly-client-ip')
+          || request.headers.get('x-real-ip')
           || request.headers.get('x-nf-client-connection-ip')
           || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
           || request.socket?.remoteAddress
