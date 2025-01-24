@@ -26,7 +26,54 @@ const set = async (key, value) => {
   return response.json();
 };
 
-const uploadToGithub = async (files, message) => {
+const uploadToGithub = async (files, date) => {
+  const list = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/`, {
+    headers: {
+      'Authorization': `token ${GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'User-Agent': 'Wallpaper-Update-Bot'
+    }
+  });
+
+  if (!list.ok) {
+    throw new Error(`Failed to get repo contents: ${await list.text()}`);
+  }
+
+  const contents = await list.json();
+  const sixtyDaysAgo = new Date();
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
+  const filesToDelete = contents
+    .filter(file => {
+      if (!file.name.match(/^wallpaper-\d{8}(-mobile||-metadata\.json)?\.webp?$/)) return false;
+      const fileDate = file.name.match(/\d{8}/)[0];
+      const fileDateTime = new Date(
+        fileDate.substring(0, 4),
+        parseInt(fileDate.substring(4, 6)) - 1,
+        fileDate.substring(6, 8)
+      );
+      return fileDateTime < sixtyDaysAgo;
+    })
+    .map(file => ({
+      path: file.path,
+      sha: file.sha
+    }));
+
+  await Promise.all(filesToDelete.map(file =>
+    fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${file.path}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `token ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Wallpaper-Update-Bot'
+      },
+      body: JSON.stringify({
+        message: `Delete old wallpaper file ${file.path}`,
+        sha: file.sha
+      })
+    })
+  ));
+
   const updates = await Promise.all(files.map(async file => {
     const getCurrentFile = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${file.path}`, {
       headers: {
@@ -129,7 +176,7 @@ const uploadToGithub = async (files, message) => {
       'User-Agent': 'Wallpaper-Update-Bot'
     },
     body: JSON.stringify({
-      message: message,
+      message: `${date} Update`,
       tree: newTree.sha,
       parents: [mainTree.sha]
     })
@@ -229,7 +276,7 @@ const getBingWallpaper = async () => {
 };
 
 export default async (req, res) => {
-  const date = new Date().toISOString().split('T')[0];
+  const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
   if (req.method === 'GET') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
@@ -280,18 +327,18 @@ export default async (req, res) => {
           }), set('wallpaper-metadata', metadata),
           uploadToGithub([
             {
-              path: 'wallpaper.webp',
+              path: `wallpaper-${date}.webp`,
               content: image.toString('base64'),
             },
             {
-              path: 'metadata.json',
+              path: `wallpaper-${date}-metadata.json`,
               content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
             },
             {
-              path: 'wallpaper-mobile.webp',
+              path: `wallpaper-${date}-mobile.webp`,
               content: mobileImage.toString('base64'),
             }
-          ], `Update wallpaper and description for ${date}`)
+          ], date)
         ]));
       } catch (error) {
         res.status(500).json({ error: error.message });
@@ -317,18 +364,18 @@ export default async (req, res) => {
         }), set('wallpaper-metadata', metadata),
         uploadToGithub([
           {
-            path: 'wallpaper.webp',
+            path: `wallpaper-${date}.webp`,
             content: image.toString('base64'),
           },
           {
-            path: 'metadata.json',
+            path: `wallpaper-${date}-metadata.json`,
             content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
           },
           {
-            path: 'wallpaper-mobile.webp',
+            path: `wallpaper-${date}-mobile.webp`,
             content: mobileImage.toString('base64'),
           }
-        ], `Update wallpaper and description for ${date}`)
+        ], date)
       ]);
       res.status(200).json({ success: true });
     } catch (error) {
