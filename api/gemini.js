@@ -71,7 +71,7 @@ export default async function handler(req, env = {}) {
     const data = await response.json();
     return new Response(JSON.stringify({
       text: data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim(),
-      query: data.candidates[0]?.groundingMetadata?.webSearchQueries[0] || null
+      query: data.candidates[0]?.groundingMetadata?.webSearchQueries?.[0] || null
     }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
