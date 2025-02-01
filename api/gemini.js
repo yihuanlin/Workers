@@ -48,7 +48,7 @@ export default async function handler(req, env = {}) {
   }
 
   try {
-    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -58,15 +58,20 @@ export default async function handler(req, env = {}) {
         contents: [{
           parts: [
             ...chatHistory.map(msg => ({ text: msg + '\n' })),
-            { text: `You are talking to a biologist who may ask biology or general questions. Current question: ${searchValue}\nAnswer ideally in a sentence.` }
+            { text: `You are engaging with a biologist who may ask questions related to biology or general topics. Respond concisely, ideally in a single sentence, while ensuring accuracy and clarity in your answers.\n Question: ${searchValue}` }
           ]
-        }]
+        }],
+        tools: [{
+          google_search: {}
+        }
+        ]
       })
     });
 
     const data = await response.json();
     return new Response(JSON.stringify({
-      text: data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim()
+      text: data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim(),
+      query: data.candidates[0]?.groundingMetadata?.webSearchQueries[0] || null
     }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
