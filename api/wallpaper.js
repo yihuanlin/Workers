@@ -3,6 +3,7 @@ import { put } from '@vercel/blob';
 import { get } from '@vercel/edge-config';
 import { waitUntil } from '@vercel/functions';
 
+const remove_old_files = false;
 const EDGE_CONFIG = process.env.EDGE_CONFIG;
 const API_TOKEN = process.env.VERCEL_API_TOKEN;
 const BLOB_ID = process.env.BLOB_ID;
@@ -43,36 +44,38 @@ const uploadToGithub = async (files, date) => {
   const sixtyDaysAgo = new Date();
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-  const filesToDelete = contents
-    .filter(file => {
-      if (!file.name.match(/^wallpaper-\d{8}(-mobile||-metadata\.json)?\.webp?$/)) return false;
-      const fileDate = file.name.match(/\d{8}/)[0];
-      const fileDateTime = new Date(
-        fileDate.substring(0, 4),
-        parseInt(fileDate.substring(4, 6)) - 1,
-        fileDate.substring(6, 8)
-      );
-      return fileDateTime < sixtyDaysAgo;
-    })
-    .map(file => ({
-      path: file.path,
-      sha: file.sha
-    }));
-
-  await Promise.all(filesToDelete.map(file =>
-    fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${file.path}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `token ${GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'Wallpaper-Update-Bot'
-      },
-      body: JSON.stringify({
-        message: `Delete old wallpaper file ${file.path}`,
-        sha: file.sha
+  if (remove_old_files) {
+    const filesToDelete = contents
+      .filter(file => {
+        if (!file.name.match(/^\d{8}(-mobile||-metadata\.json)?\.webp?$/)) return false;
+        const fileDate = file.name.match(/\d{8}/)[0];
+        const fileDateTime = new Date(
+          fileDate.substring(0, 4),
+          parseInt(fileDate.substring(4, 6)) - 1,
+          fileDate.substring(6, 8)
+        );
+        return fileDateTime < sixtyDaysAgo;
       })
-    })
-  ));
+      .map(file => ({
+        path: file.path,
+        sha: file.sha
+      }));
+
+    await Promise.all(filesToDelete.map(file =>
+      fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${file.path}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `token ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'Wallpaper-Update-Bot'
+        },
+        body: JSON.stringify({
+          message: `Delete old wallpaper file ${file.path}`,
+          sha: file.sha
+        })
+      })
+    ));
+  }
 
   const updates = await Promise.all(files.map(async file => {
     const getCurrentFile = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${file.path}`, {
@@ -327,15 +330,15 @@ export default async (req, res) => {
           }), set('wallpaper-metadata', metadata),
           uploadToGithub([
             {
-              path: `wallpaper-${date}.webp`,
+              path: `${date.slice(0, -2)}/${date}.webp`,
               content: image.toString('base64'),
             },
             {
-              path: `wallpaper-${date}-metadata.json`,
+              path: `${date.slice(0, -2)}/${date}-metadata.json`,
               content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
             },
             {
-              path: `wallpaper-${date}-mobile.webp`,
+              path: `${date.slice(0, -2)}/${date}-mobile.webp`,
               content: mobileImage.toString('base64'),
             }
           ], date)
@@ -364,15 +367,15 @@ export default async (req, res) => {
         }), set('wallpaper-metadata', metadata),
         uploadToGithub([
           {
-            path: `wallpaper-${date}.webp`,
+            path: `${date.slice(0, -2)}/${date}.webp`,
             content: image.toString('base64'),
           },
           {
-            path: `wallpaper-${date}-metadata.json`,
+            path: `${date.slice(0, -2)}/${date}-metadata.json`,
             content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
           },
           {
-            path: `wallpaper-${date}-mobile.webp`,
+            path: `${date.slice(0, -2)}/${date}-mobile.webp`,
             content: mobileImage.toString('base64'),
           }
         ], date)
