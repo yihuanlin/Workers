@@ -3,7 +3,8 @@ import { put } from '@vercel/blob';
 import { get } from '@vercel/edge-config';
 import { waitUntil } from '@vercel/functions';
 
-const remove_old_files = false;
+const removeOldFiles = false;
+const uploadWhenGetFailed = false;
 const EDGE_CONFIG = process.env.EDGE_CONFIG;
 const API_TOKEN = process.env.VERCEL_API_TOKEN;
 const BLOB_ID = process.env.BLOB_ID;
@@ -44,7 +45,7 @@ const uploadToGithub = async (files, date) => {
   const sixtyDaysAgo = new Date();
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-  if (remove_old_files) {
+  if (removeOldFiles) {
     const filesToDelete = contents
       .filter(file => {
         if (!file.name.match(/^\d{8}(-mobile||-metadata\.json)?\.webp?$/)) return false;
@@ -314,35 +315,37 @@ export default async (req, res) => {
         } else {
           res.status(200).json(metadata);
         }
-        waitUntil(Promise.all([
-          put('wallpaper.webp', image, {
-            access: 'public',
-            addRandomSuffix: false,
-            contentType: 'image/webp'
-          }), put('metadata.json', JSON.stringify(metadata), {
-            access: 'public',
-            addRandomSuffix: false,
-            contentType: 'application/json'
-          }), put('wallpaper-mobile.webp', mobileImage, {
-            access: 'public',
-            addRandomSuffix: false,
-            contentType: 'image/webp'
-          }), set('wallpaper-metadata', metadata),
-          uploadToGithub([
-            {
-              path: `${date.slice(0, -2)}/${date}.webp`,
-              content: image.toString('base64'),
-            },
-            {
-              path: `${date.slice(0, -2)}/${date}-metadata.json`,
-              content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
-            },
-            {
-              path: `${date.slice(0, -2)}/${date}-mobile.webp`,
-              content: mobileImage.toString('base64'),
-            }
-          ], date)
-        ]));
+        if (uploadWhenGetFailed) {
+          waitUntil(Promise.all([
+            put('wallpaper.webp', image, {
+              access: 'public',
+              addRandomSuffix: false,
+              contentType: 'image/webp'
+            }), put('metadata.json', JSON.stringify(metadata), {
+              access: 'public',
+              addRandomSuffix: false,
+              contentType: 'application/json'
+            }), put('wallpaper-mobile.webp', mobileImage, {
+              access: 'public',
+              addRandomSuffix: false,
+              contentType: 'image/webp'
+            }), set('wallpaper-metadata', metadata),
+            uploadToGithub([
+              {
+                path: `${date.slice(0, -2)}/${date}.webp`,
+                content: image.toString('base64'),
+              },
+              {
+                path: `${date.slice(0, -2)}/${date}-metadata.json`,
+                content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
+              },
+              {
+                path: `${date.slice(0, -2)}/${date}-mobile.webp`,
+                content: mobileImage.toString('base64'),
+              }
+            ], date)
+          ]));
+        }
       } catch (error) {
         res.status(500).json({ error: error.message });
       }
