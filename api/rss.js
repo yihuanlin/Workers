@@ -140,7 +140,11 @@ export default async function handler(request, env = {}) {
       .normalize('NFKC')
       .trim();
     title = (/[.!?]$/.test(title) ? title : title + '.');
-
+    if (title === title.toUpperCase() || title.split(' ').every(word => word[0] === word[0].toUpperCase() && word.slice(1) === word.slice(1).toLowerCase())) {
+      title = title.toLowerCase().replace(/(^\s*\w|[.?!]\s*\w)/g, function (c) {
+        return c.toUpperCase();
+      });
+    }
 
     let description = randomItem.description;
     try {
