@@ -140,8 +140,19 @@ export default async function handler(request, env = {}) {
       .normalize('NFKC')
       .trim();
     title = (/[.!?]$/.test(title) ? title : title + '.');
-    if (title === title.toUpperCase() || title.split(' ').every(word => word[0] === word[0].toUpperCase() && word.slice(1) === word.slice(1).toLowerCase())) {
-      title = title.toLowerCase().replace(/(^\s*\w|[.?!]\s*\w)/g, function (c) {
+    if (title === title.toUpperCase() || title.split(' ').every(word => {
+      const lowerCaseExceptions = ['the', 'is', 'are', 'a', 'an', 'of', 'in', 'to', 'for', 'on', 'at', 'by', 'and', 'or', 'but', 'as'];
+      if (lowerCaseExceptions.includes(word.toLowerCase())) {
+        return true;
+      }
+      return (word[0] === word[0].toUpperCase() && word.slice(1) === word.slice(1).toLowerCase()) || (word[0] === word[0].toUpperCase() && (word.match(/[A-Z]/g) || []).length > 1);
+    })) {
+      title = title.split(' ').map(word => {
+        if (title !== title.toUpperCase() && (word.match(/[A-Z]/g) || []).length > 1) {
+          return word;
+        }
+        return word.toLowerCase();
+      }).join(' ').replace(/(^\s*\w|[.?!]\s*\w)/g, function (c) {
         return c.toUpperCase();
       });
     }
