@@ -141,7 +141,7 @@ export default async function handler(request, env = {}) {
       .trim();
     title = (/[.!?]$/.test(title) ? title : title + '.');
     if (title === title.toUpperCase() || title.split(' ').every(word => {
-      const lowerCaseExceptions = ['the', 'is', 'are', 'a', 'an', 'of', 'in', 'to', 'for', 'on', 'at', 'by', 'and', 'or', 'but', 'as'];
+      const lowerCaseExceptions = ['the', 'is', 'are', 'a', 'an', 'of', 'in', 'to', 'for', 'on', 'at', 'by', 'and', 'or', 'but', 'as', 'that', 'than', 'when', 'upon', 'with', 'over', 'once', 'onto', 'into', 'from', 'nor', 'past'];
       if (lowerCaseExceptions.includes(word.toLowerCase())) {
         return true;
       }
