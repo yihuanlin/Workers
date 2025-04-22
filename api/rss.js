@@ -181,7 +181,7 @@ export default async function handler(request, env = {}) {
         })));
 
         if (description.length > 200 && summary) {
-          const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent', {
+          const geminiResponse = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
