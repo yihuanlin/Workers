@@ -50,6 +50,17 @@ export default async function handler(req, env = {}) {
   }
 
   try {
+    if (model === 'ds' || model === 'deepseek') {
+      model = 'microsoft/MAI-DS-R1';
+    } else if (model === 'o4' || model === 'o4mini' || model === '4') {
+      model = 'openai/o4-mini';
+    } else if (model === 'o3' || model === '3') {
+      model = 'openai/o3';
+    } else if (model === '4o') {
+      model = 'openai/gpt-4o';
+    } else if (model === '4.1' || model == '4' || model === 'gpt41') {
+      model = 'openai/gpt-4.1';
+    }
     const response = await fetch('https://models.github.ai/inference/chat/completions', {
       method: 'POST',
       headers: {
@@ -66,7 +77,7 @@ export default async function handler(req, env = {}) {
         ],
         temperature: 1.0,
         top_p: 1.0,
-        model: model && model.length > 0 ? model : 'openai/gpt-4.1'
+        model: model && model.length > 0 ? model : 'deepseek/DeepSeek-V3-0324'
       })
     });
     const data = await response.json();
