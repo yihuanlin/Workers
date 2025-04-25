@@ -10,9 +10,11 @@ const corsHeaders = {
 
 export default async function handler(req, env = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
-  const origin = req.headers.get('origin') || req.headers.get('Origin');
-  const method = req.method;
-  const isAllowed = !origin || origin === 'file://' || origin.endsWith('yhl.ac.cn');
+  const origin = request.headers.get('origin') || request.headers.get('Origin');
+  const userAgent = request.headers.get('user-agent');
+  const isAllowed = (!origin || origin == 'file://' ||
+    origin.endsWith('yhl.ac.cn')) &&
+    userAgent !== 'Fastly/cache-check';
 
   if (!isAllowed) {
     return new Response(JSON.stringify({ error: 'Access denied' }), {
@@ -63,8 +65,7 @@ export default async function handler(req, env = {}) {
         }],
         tools: [{
           google_search: {}
-        }
-        ]
+        }]
       })
     });
 

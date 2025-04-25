@@ -48,9 +48,12 @@ const corsHeaders = {
 
 export default async function handler(request, env = {}) {
   const apiKey = process.env.GEMINI_API_KEY;
-  const origin = request.headers['origin'] || request.headers['Origin'];
-  const isAllowed = !origin || origin == 'file://' ||
-    origin.endsWith('yhl.ac.cn');
+  const origin = request.headers.get('origin') || request.headers.get('Origin');
+  const userAgent = request.headers.get('user-agent');
+  const isAllowed = (!origin || origin == 'file://' ||
+    origin.endsWith('yhl.ac.cn')) &&
+    userAgent !== 'Fastly/cache-check';
+
   if (!isAllowed) {
     return new Response(
       JSON.stringify({ error: `Access denied` }),

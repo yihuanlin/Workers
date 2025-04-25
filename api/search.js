@@ -10,8 +10,10 @@ const corsHeaders = {
 
 export default async function handler(request) {
   const origin = request.headers.get('origin') || request.headers.get('Origin');
-  const method = request.method;
-  const isAllowed = !origin || origin === 'file://' || origin.endsWith('yhl.ac.cn');
+  const userAgent = request.headers.get('user-agent');
+  const isAllowed = (!origin || origin == 'file://' ||
+    origin.endsWith('yhl.ac.cn')) &&
+    userAgent !== 'Fastly/cache-check';
 
   if (!isAllowed) {
     return new Response(JSON.stringify({ error: 'Access denied' }), {
