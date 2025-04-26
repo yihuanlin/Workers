@@ -280,7 +280,7 @@ const getBingWallpaper = async () => {
 };
 
 export default async (req, res) => {
-  if (req.headers['user-agent'] !== 'Fastly/cache-check') {
+  if (req.headers['user-agent'] == 'Fastly/cache-check') {
     return res.status(403).json({ error: 'Access denied' });
   }
 
