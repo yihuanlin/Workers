@@ -21,6 +21,9 @@ export default async function handler(request) {
       headers: corsHeaders
     });
   }
+
+  const method = request.method;
+
   if (method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
   }

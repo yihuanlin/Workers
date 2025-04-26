@@ -47,7 +47,6 @@ const corsHeaders = {
 };
 
 export default async function handler(request, env = {}) {
-  const apiKey = process.env.GEMINI_API_KEY;
   const origin = request.headers.get('origin') || request.headers.get('Origin');
   const userAgent = request.headers.get('user-agent');
   const isAllowed = (!origin || origin == 'file://' ||
@@ -66,13 +65,16 @@ export default async function handler(request, env = {}) {
     );
   }
 
-  if (request.method === 'OPTIONS') {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const method = request.method;
+
+  if (method === 'OPTIONS') {
     return new Response(null, {
       headers: corsHeaders
     });
   }
 
-  if (request.method === 'GET') {
+  if (method === 'GET') {
     const { searchParams } = new URL(request.url);
     const summary = searchParams.get('s');
 

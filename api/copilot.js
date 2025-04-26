@@ -8,8 +8,7 @@ const corsHeaders = {
   'Vary': 'Accept-Encoding, Query'
 };
 
-export default async function handler(req, env = {}) {
-  const apiKey = process.env.GITHUB_TOKEN;
+export default async function handler(request, env = {}) {
   const origin = request.headers.get('origin') || request.headers.get('Origin');
   const userAgent = request.headers.get('user-agent');
   const isAllowed = (!origin || origin == 'file://' ||
@@ -22,6 +21,10 @@ export default async function handler(req, env = {}) {
       headers: { 'Content-Type': 'application/json' }
     });
   }
+
+  const apiKey = process.env.GITHUB_TOKEN;
+  const method = request.method;
+
   if (method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
@@ -35,12 +38,12 @@ export default async function handler(req, env = {}) {
 
   let searchValue, chatHistory, model = [];
   if (method === 'POST') {
-    const body = await req.json();
+    const body = await request.json();
     searchValue = body.searchValue;
     model = body.model;
     chatHistory = body.chatHistory || [];
   } else {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     searchValue = searchParams.get('q');
     model = searchParams.get('m');
   }

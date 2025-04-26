@@ -28,13 +28,15 @@ export default async function handler(request, env = {}) {
     );
   }
 
-  if (request.method === 'OPTIONS') {
+  const method = request.method;
+
+  if (method === 'OPTIONS') {
     return new Response(null, {
       headers: corsHeaders
     });
   }
 
-  if (request.method === 'GET') {
+  if (method === 'GET') {
     let response, latitude, longitude, city, cleanedCity, ip;
     try {
       try {

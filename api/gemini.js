@@ -8,20 +8,22 @@ const corsHeaders = {
   'Vary': 'Accept-Encoding, Query'
 };
 
-export default async function handler(req, env = {}) {
-  const apiKey = process.env.GEMINI_API_KEY;
+export default async function handler(request, env = {}) {
   const origin = request.headers.get('origin') || request.headers.get('Origin');
   const userAgent = request.headers.get('user-agent');
   const isAllowed = (!origin || origin == 'file://' ||
     origin.endsWith('yhl.ac.cn')) &&
     userAgent !== 'Fastly/cache-check';
-
   if (!isAllowed) {
     return new Response(JSON.stringify({ error: 'Access denied' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' }
     });
   }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  const method = request.method;
+
   if (method === 'OPTIONS') {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
@@ -35,11 +37,11 @@ export default async function handler(req, env = {}) {
 
   let searchValue, chatHistory = [];
   if (method === 'POST') {
-    const body = await req.json();
+    const body = await request.json();
     searchValue = body.searchValue;
     chatHistory = body.chatHistory || [];
   } else {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = new URL(request.url);
     searchValue = searchParams.get('q');
   }
   if (!searchValue) {
