@@ -15,6 +15,7 @@ export default async function handler(request, env = {}) {
   const isAllowed = (!origin || origin == 'file://' ||
     origin.endsWith('yhl.ac.cn')) &&
     userAgent !== 'Fastly/cache-check';
+
   if (!isAllowed) {
     return new Response(JSON.stringify({ error: 'Access denied' }), {
       status: 403,

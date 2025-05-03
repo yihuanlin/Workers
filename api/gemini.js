@@ -72,8 +72,9 @@ export default async function handler(request, env = {}) {
     });
 
     const data = await response.json();
+    const nonThoughtPart = data.candidates[0]?.content.parts.find(part => !part.thought);
     return new Response(JSON.stringify({
-      text: data.candidates[0]?.content.parts[0]?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim(),
+      text: nonThoughtPart?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim(),
       query: data.candidates[0]?.groundingMetadata?.webSearchQueries?.[0] || null
     }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
