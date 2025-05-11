@@ -26,6 +26,10 @@ const feedGroups = {
   elife: [
     'https://elifesciences.org/rss/digests.xml',
     'https://elifesciences.org/rss/subject/developmental-biology.xml'
+  ],
+  mdpi: [
+    'https://rsshub.app/mdpi/cells', // https://www.mdpi.com/rss/journal/cells
+    'https://rsshub.app/mdpi/biomolecules' // https://www.mdpi.com/rss/journal/biomolecules
   ]
 };
 

@@ -72,14 +72,21 @@ export default async function handler(request, env = {}) {
     });
 
     const data = await response.json();
-    const nonThoughtPart = data.candidates[0]?.content.parts.find(part => !part.thought);
+    if (!response.ok) {
+      throw new Error(data.error.message || 'Failed to fetch data from Gemini API');
+    }
+
+    const nonThoughtPart = data.candidates[0]?.content?.parts?.find(part => !part.thought);
+    const responseText = nonThoughtPart?.text ? nonThoughtPart.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim() : '';
+
     return new Response(JSON.stringify({
-      text: nonThoughtPart?.text.replace(/\*(.*?)\*/g, '<em>$1</em>').trim(),
+      text: responseText,
       query: data.candidates[0]?.groundingMetadata?.webSearchQueries?.[0] || null
     }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
     });
   } catch (error) {
+    console.warn(error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders }
