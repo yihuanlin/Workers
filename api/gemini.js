@@ -11,8 +11,10 @@ const corsHeaders = {
 export default async function handler(request, env = {}) {
   const origin = request.headers.get('origin') || request.headers.get('Origin');
   const userAgent = request.headers.get('user-agent');
-  const isAllowed = (!origin || origin == 'file://' ||
-    origin.endsWith('yhl.ac.cn')) &&
+  const isAllowed = (!origin || origin.startsWith('file://') ||
+    origin.endsWith('yhl.ac.cn') ||
+    origin.startsWith('safari-web-extension://') ||
+    origin.startsWith('chrome-extension://')) &&
     userAgent !== 'Fastly/cache-check';
 
   if (!isAllowed) {
