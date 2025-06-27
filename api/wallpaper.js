@@ -12,6 +12,8 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPO = process.env.GITHUB_REPO;
 const BING_API = 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-GB';
 const EDGE_CONFIG_ID = !EDGE_CONFIG ? null : EDGE_CONFIG.match(/ecfg_[a-zA-Z0-9]+/)?.[0] ?? null;
+const WEBHOOK_URL = process.env.WEBHOOK_URL;
+const WEBHOOK_AVATAR_URL = process.env.WEBHOOK_AVATAR_URL;
 
 const set = async (key, value) => {
   const response = await fetch(`https://api.vercel.com/v1/edge-config/${EDGE_CONFIG_ID}/items`, {
@@ -48,7 +50,7 @@ const uploadToGithub = async (files, date) => {
   if (removeOldFiles) {
     const filesToDelete = contents
       .filter(file => {
-        if (!file.name.match(/^\d{8}(-mobile||-metadata\.json)?\.webp?$/)) return false;
+        if (!file.name.match(/^\d{8}(-mobile|-metadata\.json)?\.(webp|avif)$/)) return false;
         const fileDate = file.name.match(/\d{8}/)[0];
         const fileDateTime = new Date(
           fileDate.substring(0, 4),
@@ -259,12 +261,13 @@ const getBingWallpaper = async () => {
     sharp(mobileResized).stats().then(r => getAvgColor(r))
   ]);
 
-  const [desktopWebpBuffer, mobileWebpBuffer] = await Promise.all([
+  // Changed to AVIF with 85% quality
+  const [desktopAvifBuffer, mobileAvifBuffer] = await Promise.all([
     await sharp(Buffer.from(desktopData))
-      .webp({ quality: 80 })
+      .avif({ quality: 85 })
       .toBuffer(),
     await sharp(Buffer.from(mobileData))
-      .webp({ quality: 80 })
+      .avif({ quality: 85 })
       .toBuffer()
   ]);
 
@@ -276,7 +279,8 @@ const getBingWallpaper = async () => {
     mobileColor: mobileAvgColor,
   };
 
-  return { image: desktopWebpBuffer, mobileImage: mobileWebpBuffer, metadata };
+  // Return AVIF buffers
+  return { image: desktopAvifBuffer, mobileImage: mobileAvifBuffer, metadata };
 };
 
 export default async (req, res) => {
@@ -290,14 +294,16 @@ export default async (req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
     try {
       if (req.query.type === 'image') {
-        const response = await fetch(`https://${BLOB_ID}.public.blob.vercel-storage.com/wallpaper.webp`);
+        // Fetching AVIF from Blob storage
+        const response = await fetch(`https://${BLOB_ID}.public.blob.vercel-storage.com/wallpaper.avif`);
         const imageBuffer = await response.arrayBuffer();
-        res.setHeader('Content-Type', 'image/webp');
+        res.setHeader('Content-Type', 'image/avif'); // Set Content-Type to image/avif
         res.send(Buffer.from(imageBuffer));
       } else if (req.query.type === 'mobile') {
-        const response = await fetch(`https://${BLOB_ID}.public.blob.vercel-storage.com/wallpaper-mobile.webp`);
+        // Fetching AVIF from Blob storage
+        const response = await fetch(`https://${BLOB_ID}.public.blob.vercel-storage.com/wallpaper-mobile.avif`);
         const imageBuffer = await response.arrayBuffer();
-        res.setHeader('Content-Type', 'image/webp');
+        res.setHeader('Content-Type', 'image/avif'); // Set Content-Type to image/avif
         res.send(Buffer.from(imageBuffer));
       } else {
         let metadata = await get('wallpaper-metadata');
@@ -311,44 +317,67 @@ export default async (req, res) => {
       try {
         const { image, mobileImage, metadata } = await getBingWallpaper();
         if (req.query.type === 'image') {
-          res.setHeader('Content-Type', 'image/webp');
+          res.setHeader('Content-Type', 'image/avif'); // Set Content-Type to image/avif
           res.send(image);
         } if (req.query.type === 'mobile') {
-          res.setHeader('Content-Type', 'image/webp');
+          res.setHeader('Content-Type', 'image/avif'); // Set Content-Type to image/avif
           res.send(mobileImage);
         } else {
           res.status(200).json(metadata);
         }
         if (uploadWhenGetFailed) {
-          waitUntil(Promise.all([
-            put('wallpaper.webp', image, {
-              access: 'public',
-              addRandomSuffix: false,
-              contentType: 'image/webp'
-            }), put('metadata.json', JSON.stringify(metadata), {
-              access: 'public',
-              addRandomSuffix: false,
-              contentType: 'application/json'
-            }), put('wallpaper-mobile.webp', mobileImage, {
-              access: 'public',
-              addRandomSuffix: false,
-              contentType: 'image/webp'
-            }), set('wallpaper-metadata', metadata),
-            uploadToGithub([
-              {
-                path: `${date.slice(0, -2)}/${date}.webp`,
-                content: image.toString('base64'),
-              },
-              {
-                path: `${date.slice(0, -2)}/${date}-metadata.json`,
-                content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
-              },
-              {
-                path: `${date.slice(0, -2)}/${date}-mobile.webp`,
-                content: mobileImage.toString('base64'),
+          waitUntil(
+            (async () => { // Wrap in an async IIFE to use try/catch for background operations
+              try {
+                await Promise.all([
+                  // Uploading AVIF to Blob storage
+                  put('wallpaper.avif', image, {
+                    access: 'public',
+                    addRandomSuffix: false,
+                    contentType: 'image/avif'
+                  }), put('metadata.json', JSON.stringify(metadata), {
+                    access: 'public',
+                    addRandomSuffix: false,
+                    contentType: 'application/json'
+                  }), put('wallpaper-mobile.avif', mobileImage, {
+                    access: 'public',
+                    addRandomSuffix: false,
+                    contentType: 'image/avif'
+                  }), set('wallpaper-metadata', metadata),
+                  // Uploading AVIF to GitHub
+                  uploadToGithub([
+                    {
+                      path: `${date.slice(0, -2)}/${date}.avif`, // Changed file extension
+                      content: image.toString('base64'),
+                    },
+                    {
+                      path: `${date.slice(0, -2)}/${date}-metadata.json`,
+                      content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
+                    },
+                    {
+                      path: `${date.slice(0, -2)}/${date}-mobile.avif`, // Changed file extension
+                      content: mobileImage.toString('base64'),
+                    }
+                  ], date)
+                ]);
+              } catch (error) {
+                console.error('Error during background upload (GET request, uploadWhenGetFailed):', error);
+                // Send webhook on uploadToGithub failure
+                if (WEBHOOK_URL) {
+                  await fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      content: `Failed to upload to GitHub (GET request, uploadWhenGetFailed): ${error.message}`,
+                      avatar_url: WEBHOOK_AVATAR_URL,
+                    }),
+                  }).catch(webhookError => console.error('Failed to send webhook:', webhookError));
+                }
               }
-            ], date)
-          ]));
+            })()
+          );
         }
       } catch (error) {
         res.status(500).json({ error: error.message });
@@ -359,22 +388,22 @@ export default async (req, res) => {
     try {
       const { image, mobileImage, metadata } = await getBingWallpaper();
       await Promise.all([
-        put('wallpaper.webp', image, {
+        put('wallpaper.avif', image, {
           access: 'public',
           addRandomSuffix: false,
-          contentType: 'image/webp'
+          contentType: 'image/avif'
         }), put('metadata.json', JSON.stringify(metadata), {
           access: 'public',
           addRandomSuffix: false,
           contentType: 'application/json'
-        }), put('wallpaper-mobile.webp', mobileImage, {
+        }), put('wallpaper-mobile.avif', mobileImage, {
           access: 'public',
           addRandomSuffix: false,
-          contentType: 'image/webp'
+          contentType: 'image/avif'
         }), set('wallpaper-metadata', metadata),
         uploadToGithub([
           {
-            path: `${date.slice(0, -2)}/${date}.webp`,
+            path: `${date.slice(0, -2)}/${date}.avif`,
             content: image.toString('base64'),
           },
           {
@@ -382,13 +411,26 @@ export default async (req, res) => {
             content: Buffer.from(JSON.stringify(metadata)).toString('base64'),
           },
           {
-            path: `${date.slice(0, -2)}/${date}-mobile.webp`,
+            path: `${date.slice(0, -2)}/${date}-mobile.avif`,
             content: mobileImage.toString('base64'),
           }
         ], date)
       ]);
       res.status(200).json({ success: true });
     } catch (error) {
+      console.error('Error during POST request:', error);
+      if (WEBHOOK_URL) {
+        await fetch(WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            content: `Failed to upload to GitHub (POST request): ${error.message}`,
+            avatar_url: WEBHOOK_AVATAR_URL,
+          }),
+        }).catch(webhookError => console.error('Failed to send webhook:', webhookError));
+      }
       res.status(500).json({ error: error.message });
     }
   }
