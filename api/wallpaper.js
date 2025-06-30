@@ -2,7 +2,6 @@ import sharp from 'sharp';
 import { put } from '@vercel/blob';
 import { get } from '@vercel/edge-config';
 import { waitUntil } from '@vercel/functions';
-export const maxDuration = 300;
 
 const removeOldFiles = false;
 const uploadWhenGetFailed = false;
