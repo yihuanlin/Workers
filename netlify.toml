@@ -35,6 +35,11 @@
   path = "/rss"
   cache = "manual"
 
+[[edge_functions]]
+  function = "wallpaper"
+  path = "/wallpaper"
+  cache = "manual"
+
 [[redirects]]
   from = "/*"
   to = "netlify/edge-functions/index.html"

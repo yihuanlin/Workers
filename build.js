@@ -15,7 +15,7 @@ async function buildWorker() {
   const skipPatterns = ['corsHeaders'];
 
   for (const file of files) {
-    if (file.endsWith('.js') && file !== 'wallpaper.js') {
+    if (file.endsWith('.js') && file !== 'wallpaper-worker.js' && file !== 'debug.js') {
       const content = await readFile(join(apiDir, file), 'utf8');
       const exportIndex = content.indexOf('export default');
       const lines = content.substring(0, exportIndex).split('\n');

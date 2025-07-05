@@ -15,7 +15,7 @@
   "version": "1.0.0",
   "scripts": {
     "build": "npm run build:vercel",
-    "build:netlify": "rm -rf netlify && mkdir -p netlify/edge-functions && cd api && find . -type f ! -name 'wallpaper.js' -exec sh -c 'if [ \"$(basename {})\" = \"rss.js\" ]; then sed \"s/fast-xml-parser/https:\\/\\/esm.sh\\/v135\\/fast-xml-parser/g\" {} > ../netlify/edge-functions/$(basename {}); else cp {} ../netlify/edge-functions/; fi' \\;",
+    "build:netlify": "rm -rf netlify && mkdir -p netlify/edge-functions && cd api && find . -type f ! -name 'wallpaper-worker.js' ! -name 'debug.js' -exec sh -c 'if [ \"$(basename {})\" = \"rss.js\" ]; then sed \"s/fast-xml-parser/https:\\/\\/esm.sh\\/v135\\/fast-xml-parser/g\" {} > ../netlify/edge-functions/$(basename {}); else cp {} ../netlify/edge-functions/; fi' \\;",
     "build:vercel": "rm -rf public && mkdir -p public && cp -r api/* public/",
     "build:cf": "node build.js",
     "dev:netlify": "netlify dev",
